@@ -331,7 +331,7 @@ func (g *tokenGetter) shiftState(b byte, state state, token *Token) bool {
 			case stateBlockSeperator:
 				return TokenBlockSeperator
 			case stateEq, stateGt, stateGte, stateLt, stateLte:
-				return TokenOperator
+				return TokenComparation
 			case stateAssign:
 				return TokenAssignation
 			case stateNumber:
