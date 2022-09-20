@@ -18,8 +18,6 @@ const (
 	stateNumber
 	stateVoid
 	stateEqStarted
-	stateLtStarted
-	stateGtStarted
 	stateEq
 	stateLt
 	stateGt
@@ -50,16 +48,18 @@ type TokenGetter interface {
 }
 
 type tokenGetter struct {
-	source       io.Reader
-	row, col     int
-	offset       int
-	buf          []byte
-	max          int
-	state        state
-	stash        []byte
-	slashOpenned bool
-	stashOffset  int
-	keyword      []byte
+	source        io.Reader
+	row, col      int
+	offset        int
+	buf           []byte
+	max           int
+	state         state
+	stash         []byte
+	stashStartRow int
+	stashStartCol int
+	slashOpenned  bool
+	stashOffset   int
+	keyword       []byte
 }
 
 func NewTokenGetter(source io.Reader, bufSize uint) *tokenGetter {
@@ -76,6 +76,10 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 	var b byte
 	var catched bool
 	for {
+		if g.state == stateEOF {
+			token.Type = TokenEOF
+			return
+		}
 		if err = g.nextChar(&b); err != nil {
 			if errors.Is(err, io.EOF) {
 				return g.handleEOF(token)
@@ -102,14 +106,20 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 			catched, err = g.handleNumber(b, token)
 		case stateEqStarted:
 			catched, err = g.handleLogicOperatorStarted(b, token, stateEq)
-		case stateLtStarted:
+		case stateLt:
 			catched, err = g.handleLogicOperatorStarted(b, token, stateLte)
-		case stateGtStarted:
+		case stateGt:
 			catched, err = g.handleLogicOperatorStarted(b, token, stateGte)
 		case stateTrue, stateFalse:
 			catched, err = g.handleKeyword(b, token)
 		case stateAndStarted:
 			catched, err = g.handleAnd(b, token)
+		}
+		if b == '\n' {
+			g.row++
+			g.col = 0
+		} else {
+			g.col++
 		}
 		if catched || err != nil {
 			return
@@ -121,8 +131,7 @@ func (g *tokenGetter) handleAnd(b byte, token *Token) (bool, error) {
 	if b == '&' {
 		g.state = stateAnd
 		g.addToStash(b)
-		g.shiftState(0, stateVoid, token)
-		return true, nil
+		return g.shiftState(0, stateVoid, token), nil
 	}
 	return g.handleVoid(b, token)
 }
@@ -133,12 +142,17 @@ func (g *tokenGetter) handleKeyword(b byte, token *Token) (bool, error) {
 		g.addToStash(b)
 		return false, nil
 	}
-	if g.matchEndable(b, token) {
-		return true, nil
+	if len(g.keyword) == 0 {
+		if matched, catched := g.matchEndable(b, token); matched {
+			return catched, nil
+		}
+	}
+	g.state = stateVar
+	if matched, catched := g.matchEndable(b, token); matched {
+		return catched, nil
 	}
 	if g.isVarChar(b) {
 		g.addToStash(b)
-		g.state = stateVar
 		return false, nil
 	}
 	return false, &ParseError{
@@ -154,8 +168,7 @@ func (g *tokenGetter) handleLogicOperatorStarted(b byte, token *Token, next stat
 	case b == '=':
 		g.state = next
 		g.addToStash(b)
-		g.shiftState(b, stateVoid, token)
-		return true, nil
+		return g.shiftState(0, stateVoid, token), nil
 	}
 	return g.handleVoid(b, token)
 }
@@ -176,7 +189,9 @@ func (g *tokenGetter) handleEOF(token *Token) error {
 			return err
 		}
 		g.shiftState(' ', stateEOF, token)
+		return nil
 	}
+	token.Type = TokenEOF
 	return nil
 }
 
@@ -198,8 +213,7 @@ func (g *tokenGetter) handleString(b byte, token *Token) (bool, error) {
 			return false, nil
 		}
 		g.addToStash(b)
-		g.shiftState(0, stateVoid, token)
-		return true, nil
+		return g.shiftState(0, stateVoid, token), nil
 	case '\\':
 		g.slashOpenned = true
 		g.addToStash(b)
@@ -207,17 +221,6 @@ func (g *tokenGetter) handleString(b byte, token *Token) (bool, error) {
 		g.addToStash(b)
 	}
 	return false, nil
-}
-
-func (g *tokenGetter) handleEqStarted(b byte, token *Token) (bool, error) {
-	switch {
-	case b == '=':
-		g.addToStash(b)
-		g.state = stateEq
-		g.shiftState(b, stateVoid, token)
-		return true, nil
-	}
-	return g.handleVoid(b, token)
 }
 
 func (g *tokenGetter) handleStart(b byte, token *Token) (bool, error) {
@@ -230,14 +233,12 @@ func (g *tokenGetter) handleStart(b byte, token *Token) (bool, error) {
 
 func (g *tokenGetter) handleVoid(b byte, token *Token) (bool, error) {
 	switch b {
-	case 't', 'T':
+	case 't':
 		g.keyword = []byte{'r', 'u', 'e'}
-		g.shiftState(b, stateTrue, token)
-		return true, nil
-	case 'f', 'F':
+		return g.shiftState(b, stateTrue, token), nil
+	case 'f':
 		g.keyword = []byte{'a', 'l', 's', 'e'}
-		g.shiftState(b, stateFalse, token)
-		return true, nil
+		return g.shiftState(b, stateFalse, token), nil
 	}
 	return g.matchNormal(b, token)
 }
@@ -247,13 +248,7 @@ func (g *tokenGetter) handleWhitespace(b byte, token *Token) (bool, error) {
 		g.addToStash(b)
 		return false, nil
 	}
-	switch b {
-	case 't':
-		g.shiftState(b, stateTrue, token)
-	case 'f':
-		g.shiftState(b, stateFalse, token)
-	}
-	return g.matchNormal(b, token)
+	return g.handleVoid(b, token)
 }
 
 func (g *tokenGetter) handleBlockSeperator(b byte, token *Token) (bool, error) {
@@ -266,55 +261,46 @@ func (g *tokenGetter) handleVariable(b byte, token *Token) (bool, error) {
 		g.addToStash(b)
 		return false, nil
 	case g.isWhitespace(b):
-		g.shiftState(b, stateWhitespace, token)
-		return true, nil
+		return g.shiftState(b, stateWhitespace, token), nil
 	}
 	return g.matchNormal(b, token)
 }
 
 func (g *tokenGetter) matchNormal(b byte, token *Token) (bool, error) {
-	if g.matchEndable(b, token) {
-		return true, nil
+	if matched, catched := g.matchEndable(b, token); matched {
+		return catched, nil
 	}
 	if b == '"' {
-		g.shiftState(b, stateString, token)
-		return true, nil
+		return g.shiftState(b, stateString, token), nil
 	}
 	switch {
 	case g.isNumber(b):
-		g.shiftState(b, stateNumber, token)
-		return true, nil
+		return g.shiftState(b, stateNumber, token), nil
 	case g.isAlpha(b):
-		g.shiftState(b, stateVar, token)
-		return true, nil
+		return g.shiftState(b, stateVar, token), nil
 	}
 	return false, &ParseError{Row: g.row, Col: g.col, Info: UnexpectedChar, CurrentBytes: []byte{b}}
 }
 
-func (g *tokenGetter) matchEndable(b byte, token *Token) bool {
+func (g *tokenGetter) matchEndable(b byte, token *Token) (matched bool, catched bool) {
 	switch b {
-	case '{', '}', '[', ']', ',', '(', ')':
-		g.shiftState(b, stateBlockSeperator, token)
-		return true
+	case '{', '}', '[', ']', ',', '(', ')', ':':
+		return true, g.shiftState(b, stateBlockSeperator, token)
 	case '=':
-		g.shiftState(b, stateEqStarted, token)
-		return true
+		return true, g.shiftState(b, stateEqStarted, token)
 	case '<':
-		g.shiftState(b, stateLtStarted, token)
-		return true
+		return true, g.shiftState(b, stateLt, token)
 	case '>':
-		g.shiftState(b, stateGtStarted, token)
-		return true
+		return true, g.shiftState(b, stateGt, token)
 	case '&':
-		g.shiftState(b, stateAndStarted, token)
+		return true, g.shiftState(b, stateAndStarted, token)
 	case '|':
-		g.shiftState(b, stateOrStarted, token)
+		return true, g.shiftState(b, stateOrStarted, token)
 	}
 	if g.isWhitespace(b) {
-		g.shiftState(b, stateWhitespace, token)
-		return true
+		return true, g.shiftState(b, stateWhitespace, token)
 	}
-	return false
+	return false, false
 }
 
 func (g *tokenGetter) nextChar(b *byte) error {
@@ -335,16 +321,17 @@ func (g *tokenGetter) nextChar(b *byte) error {
 	return nil
 }
 
-func (g *tokenGetter) shiftState(b byte, state state, token *Token) {
-	if len(g.stash) > 0 && g.state != stateStart {
-		token.Row = g.row
-		token.Col = g.col
+func (g *tokenGetter) shiftState(b byte, state state, token *Token) bool {
+	catched := false
+	if g.stashOffset > 0 && g.state != stateStart {
 		token.Type = func() TokenType {
 			switch g.state {
 			case stateVar:
 				return TokenVariable
-			case stateEq:
-				return TokenComparation
+			case stateBlockSeperator:
+				return TokenBlockSeperator
+			case stateEq, stateGt, stateGte, stateLt, stateLte:
+				return TokenOperator
 			case stateAssign:
 				return TokenAssignation
 			case stateNumber:
@@ -355,15 +342,19 @@ func (g *tokenGetter) shiftState(b byte, state state, token *Token) {
 				return TokenBoolean
 			case stateAnd, stateOr:
 				return TokenLogicOperator
+			case stateWhitespace:
+				return TokenWhitespace
 			}
 			return TokenType(100000)
 		}()
-		g.takeTokenRaw(token)
+		g.takeTokenRaw(token, b)
+		catched = true
 	}
 	if b != 0 {
 		g.addToStash(b)
 	}
 	g.state = state
+	return catched
 }
 
 func (g *tokenGetter) addToStash(b byte) {
@@ -376,13 +367,20 @@ func (g *tokenGetter) addToStash(b byte) {
 	g.stashOffset++
 }
 
-func (g *tokenGetter) takeTokenRaw(token *Token) {
+func (g *tokenGetter) takeTokenRaw(token *Token, next byte) {
 	token.Raw = make([]byte, g.stashOffset)
 	copy(token.Raw, g.stash[:g.stashOffset])
 	if len(g.stash) != stashSize {
 		g.stash = make([]byte, stashSize)
 	}
+	token.Row = g.stashStartRow
+	token.Col = g.stashStartCol
 	g.stashOffset = 0
+	g.stashStartRow = g.row
+	g.stashStartCol = g.col
+	if next == 0 {
+		g.stashStartCol++
+	}
 }
 
 func (g *tokenGetter) isWhitespace(b byte) bool {
