@@ -1,0 +1,51 @@
+a = {
+  "value": "shot",
+}
+
+maps = {
+  "a": "a",
+  "b": "b",
+}<k, v>(k == v) {
+  "key": k,
+  "val": v,
+}
+
+array = [
+  "a",
+  "b"
+]<i, v> (i == 0) v + 1 (i == 1) v + 2,
+
+
+{
+  "if": (a.value == "shot") {
+    "shot": "oh my god! you just grab a bear"
+  }, (a.value == "shot cat") {
+    "shot": "congrats! you catch a dead cat!"
+  }, (true) {
+    "sorry, you got nothing"
+  },
+  "map": maps<k, v> {
+    "key": k,
+    "value": v,
+  },
+  "map_only_value": maps<_, v> {
+    "value": v,
+  },
+  "map_only_key": maps<k> {
+    "key": k,
+  },
+  "array": array<k, v> {
+    "index": i,
+    "value": v
+  },
+}<, v>(v != null),
+
+[
+  (a.value == "hello") {
+    "title": "hello",
+  },
+  (self.0 == xx) "hello world",
+  (self.0 == xx) "hello",
+  (at(3).hello) "hello",
+  (self.kkk) "hello"
+]<, v>(v != null)
