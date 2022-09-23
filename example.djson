@@ -5,47 +5,39 @@ a = {
 maps = {
   "a": "a",
   "b": "b",
-}<k, v>(k == v) {
-  "key": k,
-  "val": v,
 }
 
-array = [
-  "a",
-  "b"
-]<i, v> (i == 0) v + 1 (i == 1) v + 2,
+maps SET <k,v>(k == "hello") {
+  k: "c"
+}, (k > "hello") {
+  k: "d"
+}
 
+maps DEL <k,v>(k == "hello")
+
+maps GET <k,v>(k != "hello")
+
+maps CON {"hello": "world"}
 
 {
-  "if": (a.value == "shot") {
-    "shot": "oh my god! you just grab a bear"
-  }, (a.value == "shot cat") {
-    "shot": "congrats! you catch a dead cat!"
-  }, (true) {
-    "sorry, you got nothing"
-  },
-  "map": maps<k, v> {
-    "key": k,
-    "value": v,
-  },
-  "map_only_value": maps<_, v> {
-    "value": v,
-  },
-  "map_only_key": maps<k> {
-    "key": k,
-  },
-  "array": array<k, v> {
-    "index": i,
-    "value": v
-  },
-}<, v>(v != null),
+  "hello": (self.world),
+  "world": maps CON {"hello": "world"}
+}
 
-[
-  (a.value == "hello") {
-    "title": "hello",
-  },
-  (self.0 == xx) "hello world",
-  (self.0 == xx) "hello",
-  (at(3).hello) "hello",
-  (self.kkk) "hello"
-]<, v>(v != null)
+
+  =
+ / \
+a  block
+     |
+    pair
+   /   \
+"value" "shot"
+
+
+        DEL
+       /   \
+ var(maps) block
+          /     \
+        pair    pair
+        /  \    /  \
+      "a"  "a" "b" "b"

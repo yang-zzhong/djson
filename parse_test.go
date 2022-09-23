@@ -111,7 +111,7 @@ func TestTokenGetter_compose(t *testing.T) {
     "int": 123,
     "float": 1.23,
     "bool": true,
-}<k, v>(k == "hello")
+} DEL <k, v>(k == "hello")
 `
 	res := []struct {
 		typ      TokenType
@@ -119,7 +119,7 @@ func TestTokenGetter_compose(t *testing.T) {
 		row, col int
 	}{
 		{typ: TokenWhitespace, raw: []byte{'\n'}, row: 0, col: 0},
-		{typ: TokenBlockSeperator, raw: []byte{'{'}, row: 1, col: 0},
+		{typ: TokenBlockStart, raw: []byte{'{'}, row: 1, col: 0},
 		{typ: TokenWhitespace, raw: []byte{'\n', ' ', ' ', ' ', ' '}, row: 1, col: 1},
 
 		{typ: TokenString, raw: []byte("\"string\""), row: 2, col: 4},
@@ -154,20 +154,23 @@ func TestTokenGetter_compose(t *testing.T) {
 
 		{typ: TokenWhitespace, raw: []byte{'\n'}},
 
-		{typ: TokenBlockSeperator, raw: []byte{'}'}},
+		{typ: TokenBlockEnd, raw: []byte{'}'}},
+		{typ: TokenWhitespace, raw: []byte{' '}},
+		{typ: TokenKeyword, raw: []byte("DEL")},
+		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenComparation, raw: []byte{'<'}},
 		{typ: TokenVariable, raw: []byte{'k'}},
 		{typ: TokenBlockSeperator, raw: []byte{','}},
 		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenVariable, raw: []byte{'v'}},
 		{typ: TokenComparation, raw: []byte{'>'}},
-		{typ: TokenBlockSeperator, raw: []byte{'('}},
+		{typ: TokenBlockStart, raw: []byte{'('}},
 		{typ: TokenVariable, raw: []byte{'k'}},
 		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenComparation, raw: []byte{'=', '='}},
 		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenString, raw: []byte("\"hello\"")},
-		{typ: TokenBlockSeperator, raw: []byte{')'}},
+		{typ: TokenBlockEnd, raw: []byte{')'}},
 		{typ: TokenWhitespace, raw: []byte{'\n'}},
 	}
 	g := NewTokenGetter(bytes.NewBuffer([]byte(data)), 128)

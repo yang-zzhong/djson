@@ -2,29 +2,47 @@ package djson
 
 import "fmt"
 
-type Error string
+type err_ string
 
-type ParseError struct {
+type Error struct {
 	Row, Col     int
-	Info         Error
+	Info         err_
 	CurrentBytes []byte
 }
 
 const (
-	UnexpectedChar Error = "unexpected char"
-	UnexpectedEOF  Error = "unexpected eof"
+	UnexpectedChar err_ = "unexpected char"
+	UnexpectedEOF  err_ = "unexpected eof"
 )
 
-func (e *ParseError) Error() string {
-	if len(e.CurrentBytes) > 0 {
-		return fmt.Sprintf("ParseError: %s '%s' at %d,%d", e.Info, e.CurrentBytes, e.Row, e.Col)
+var (
+	ErrUnexpectedEOF = &Error{
+		Info: UnexpectedEOF,
 	}
-	return fmt.Sprintf("ParseError: %s at %d,%d", e.Info, e.Row, e.Col)
+)
+
+func (e *Error) Error() string {
+	if len(e.CurrentBytes) > 0 {
+		return fmt.Sprintf("%s '%s' at %d,%d", e.Info, e.CurrentBytes, e.Row, e.Col)
+	} else if !(e.Row == 0 && e.Col == 0) {
+		return fmt.Sprintf("%s at %d,%d", e.Info, e.Row, e.Col)
+	} else {
+		return fmt.Sprintf("%s", e.Info)
+	}
 }
 
-func Is(err error, typ Error) bool {
-	if e, ok := err.(*ParseError); ok {
-		return e.Info == typ
+func ErrFromToken(info err_, token *Token) error {
+	return &Error{
+		Col:          token.Col,
+		Row:          token.Row,
+		CurrentBytes: token.Raw,
+		Info:         info,
+	}
+}
+
+func Is(err error, typ string) bool {
+	if e, ok := err.(*Error); ok {
+		return string(e.Info) == typ
 	}
 	return false
 }
