@@ -23,21 +23,3 @@ maps CON {"hello": "world"}
   "hello": (self.world),
   "world": maps CON {"hello": "world"}
 }
-
-
-  =
- / \
-a  block
-     |
-    pair
-   /   \
-"value" "shot"
-
-
-        DEL
-       /   \
- var(maps) block
-          /     \
-        pair    pair
-        /  \    /  \
-      "a"  "a" "b" "b"

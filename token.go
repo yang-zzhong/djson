@@ -19,6 +19,7 @@ const (
 	TokenKeyword                          // keyword
 	TokenString                           // string
 	TokenBoolean                          // boolean
+	TokenNull                             // null
 )
 
 type Token struct {

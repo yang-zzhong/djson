@@ -91,7 +91,7 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 		}
 		if err = g.nextChar(&b); err != nil {
 			if errors.Is(err, io.EOF) {
-				return g.handleEOF(token)
+				return g.matchEOF(token)
 			}
 			return
 		}
@@ -100,29 +100,29 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 		}
 		switch g.state {
 		case stateStart:
-			catched, err = g.handleStart(b, token)
+			catched, err = g.matchStart(b, token)
 		case stateWhitespace:
-			catched, err = g.handleWhitespace(b, token)
+			catched, err = g.matchWhitespace(b, token)
 		case stateVar:
-			catched, err = g.handleVariable(b, token)
+			catched, err = g.matchVariable(b, token)
 		case stateBlockSeperator:
-			catched, err = g.handleBlockSeperator(b, token)
+			catched, err = g.matchBlockSeperator(b, token)
 		case stateString:
-			catched, err = g.handleString(b, token)
+			catched, err = g.matchString(b, token)
 		case stateVoid:
-			catched, err = g.handleVoid(b, token)
+			catched, err = g.matchVoid(b, token)
 		case stateNumber:
-			catched, err = g.handleNumber(b, token)
+			catched, err = g.matchNumber(b, token)
 		case stateEqStarted:
-			catched, err = g.handleLogicOperatorStarted(b, token, stateEq)
+			catched, err = g.matchLogicOperatorStarted(b, token, stateEq)
 		case stateLt:
-			catched, err = g.handleLogicOperatorStarted(b, token, stateLte)
+			catched, err = g.matchLogicOperatorStarted(b, token, stateLte)
 		case stateGt:
-			catched, err = g.handleLogicOperatorStarted(b, token, stateGte)
+			catched, err = g.matchLogicOperatorStarted(b, token, stateGte)
 		case stateTrue, stateFalse, stateKeyword, stateNull:
-			catched, err = g.handleKeyword(b, token)
+			catched, err = g.matchKeyword(b, token)
 		case stateAndStarted:
-			catched, err = g.handleAnd(b, token)
+			catched, err = g.matchAnd(b, token)
 		}
 		if b == '\n' {
 			g.row++
@@ -136,16 +136,16 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 	}
 }
 
-func (g *tokenGetter) handleAnd(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchAnd(b byte, token *Token) (bool, error) {
 	if b == '&' {
 		g.state = stateAnd
 		g.addToStash(b)
 		return g.shiftState(0, stateVoid, token), nil
 	}
-	return g.handleVoid(b, token)
+	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) handleKeyword(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchKeyword(b byte, token *Token) (bool, error) {
 	for i := 0; i < len(g.keyword); i++ {
 		if len(g.keyword[i]) == 0 {
 			if matched, catched := g.matchEndable(b, token); matched {
@@ -182,17 +182,17 @@ func (g *tokenGetter) handleKeyword(b byte, token *Token) (bool, error) {
 	}
 }
 
-func (g *tokenGetter) handleLogicOperatorStarted(b byte, token *Token, next parseState) (bool, error) {
+func (g *tokenGetter) matchLogicOperatorStarted(b byte, token *Token, next parseState) (bool, error) {
 	switch {
 	case b == '=':
 		g.state = next
 		g.addToStash(b)
 		return g.shiftState(0, stateVoid, token), nil
 	}
-	return g.handleVoid(b, token)
+	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) handleEOF(token *Token) error {
+func (g *tokenGetter) matchEOF(token *Token) error {
 	err := &Error{
 		Info: UnexpectedEOF,
 		Row:  g.row,
@@ -216,7 +216,7 @@ func (g *tokenGetter) handleEOF(token *Token) error {
 	return nil
 }
 
-func (g *tokenGetter) handleNumber(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchNumber(b byte, token *Token) (bool, error) {
 	switch {
 	case g.isNumber(b) || b == '.':
 		g.addToStash(b)
@@ -225,7 +225,7 @@ func (g *tokenGetter) handleNumber(b byte, token *Token) (bool, error) {
 	return g.matchNormal(b, token)
 }
 
-func (g *tokenGetter) handleString(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchString(b byte, token *Token) (bool, error) {
 	switch b {
 	case '"':
 		if g.slashOpenned {
@@ -244,15 +244,15 @@ func (g *tokenGetter) handleString(b byte, token *Token) (bool, error) {
 	return false, nil
 }
 
-func (g *tokenGetter) handleStart(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchStart(b byte, token *Token) (bool, error) {
 	if b == 0 {
 		return false, nil
 	}
-	_, err := g.handleVoid(b, token)
+	_, err := g.matchVoid(b, token)
 	return false, err
 }
 
-func (g *tokenGetter) handleVoid(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchVoid(b byte, token *Token) (bool, error) {
 	switch b {
 	case 't':
 		g.keyword = [][]byte{{'r', 'u', 'e'}}
@@ -275,19 +275,19 @@ func (g *tokenGetter) handleVoid(b byte, token *Token) (bool, error) {
 	return g.matchNormal(b, token)
 }
 
-func (g *tokenGetter) handleWhitespace(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchWhitespace(b byte, token *Token) (bool, error) {
 	if g.isWhitespace(b) {
 		g.addToStash(b)
 		return false, nil
 	}
-	return g.handleVoid(b, token)
+	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) handleBlockSeperator(b byte, token *Token) (bool, error) {
-	return g.handleVoid(b, token)
+func (g *tokenGetter) matchBlockSeperator(b byte, token *Token) (bool, error) {
+	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) handleVariable(b byte, token *Token) (bool, error) {
+func (g *tokenGetter) matchVariable(b byte, token *Token) (bool, error) {
 	switch {
 	case g.isVarChar(b):
 		g.addToStash(b)
@@ -385,6 +385,8 @@ func (g *tokenGetter) shiftState(b byte, state parseState, token *Token) bool {
 				return TokenLogicOperator
 			case stateWhitespace:
 				return TokenWhitespace
+			case stateNull:
+				return TokenNull
 			}
 			return TokenType(100000)
 		}()
