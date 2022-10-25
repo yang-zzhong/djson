@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTokenGetter_number(t *testing.T) {
+func TestLexer_number(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -26,7 +26,7 @@ func TestTokenGetter_number(t *testing.T) {
 		{data: "124=\n", val: []byte("124"), typ: TokenNumber},
 	}
 	for _, item := range data {
-		g := NewTokenGetter(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		g.state = stateStart
 		var token Token
 		if err := g.NextToken(&token); err != nil {
@@ -42,7 +42,7 @@ func TestTokenGetter_number(t *testing.T) {
 	}
 }
 
-func TestTokenGetter_string(t *testing.T) {
+func TestLexer_string(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -56,7 +56,7 @@ func TestTokenGetter_string(t *testing.T) {
 		{data: "\"hello \\\"world\nhello\"", val: []byte("\"hello \\\"world\nhello\""), typ: TokenString},
 	}
 	for _, item := range data {
-		g := NewTokenGetter(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		g.state = stateStart
 		var token Token
 		if err := g.NextToken(&token); err != nil {
@@ -72,7 +72,7 @@ func TestTokenGetter_string(t *testing.T) {
 	}
 }
 
-func TestTokenGetter_bool(t *testing.T) {
+func TestLexer_bool(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -88,7 +88,7 @@ func TestTokenGetter_bool(t *testing.T) {
 		{data: "fals>", val: []byte("fals"), typ: TokenVariable},
 	}
 	for _, item := range data {
-		g := NewTokenGetter(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		g.state = stateStart
 		var token Token
 		if err := g.NextToken(&token); err != nil {
@@ -104,7 +104,7 @@ func TestTokenGetter_bool(t *testing.T) {
 	}
 }
 
-func TestTokenGetter_compose(t *testing.T) {
+func TestLexer_compose(t *testing.T) {
 	data := `
 {
     "string": "123",
@@ -118,62 +118,40 @@ func TestTokenGetter_compose(t *testing.T) {
 		raw      []byte
 		row, col int
 	}{
-		{typ: TokenWhitespace, raw: []byte{'\n'}, row: 0, col: 0},
 		{typ: TokenBlockStart, raw: []byte{'{'}, row: 1, col: 0},
-		{typ: TokenWhitespace, raw: []byte{'\n', ' ', ' ', ' ', ' '}, row: 1, col: 1},
-
 		{typ: TokenString, raw: []byte("\"string\""), row: 2, col: 4},
 		{typ: TokenBlockSeperator, raw: []byte{':'}, row: 2, col: 12},
-		{typ: TokenWhitespace, raw: []byte{' '}, row: 2, col: 13},
 		{typ: TokenString, raw: []byte("\"123\""), row: 2, col: 14},
 		{typ: TokenBlockSeperator, raw: []byte(","), row: 2, col: 19},
 
-		{typ: TokenWhitespace, raw: []byte{'\n', ' ', ' ', ' ', ' '}, row: 2, col: 20},
-
 		{typ: TokenString, raw: []byte("\"int\"")},
 		{typ: TokenBlockSeperator, raw: []byte{':'}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenNumber, raw: []byte("123")},
 		{typ: TokenBlockSeperator, raw: []byte(",")},
-
-		{typ: TokenWhitespace, raw: []byte{'\n', ' ', ' ', ' ', ' '}},
-
 		{typ: TokenString, raw: []byte("\"float\"")},
 		{typ: TokenBlockSeperator, raw: []byte{':'}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenNumber, raw: []byte("1.23")},
 		{typ: TokenBlockSeperator, raw: []byte(",")},
 
-		{typ: TokenWhitespace, raw: []byte{'\n', ' ', ' ', ' ', ' '}},
-
 		{typ: TokenString, raw: []byte("\"bool\"")},
 		{typ: TokenBlockSeperator, raw: []byte{':'}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenBoolean, raw: []byte("true")},
 		{typ: TokenBlockSeperator, raw: []byte(",")},
 
-		{typ: TokenWhitespace, raw: []byte{'\n'}},
-
 		{typ: TokenBlockEnd, raw: []byte{'}'}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenKeyword, raw: []byte("DEL")},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenComparation, raw: []byte{'<'}},
 		{typ: TokenVariable, raw: []byte{'k'}},
 		{typ: TokenBlockSeperator, raw: []byte{','}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenVariable, raw: []byte{'v'}},
 		{typ: TokenComparation, raw: []byte{'>'}},
 		{typ: TokenBlockStart, raw: []byte{'('}},
 		{typ: TokenVariable, raw: []byte{'k'}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenComparation, raw: []byte{'=', '='}},
-		{typ: TokenWhitespace, raw: []byte{' '}},
 		{typ: TokenString, raw: []byte("\"hello\"")},
 		{typ: TokenBlockEnd, raw: []byte{')'}},
-		{typ: TokenWhitespace, raw: []byte{'\n'}},
 	}
-	g := NewTokenGetter(bytes.NewBuffer([]byte(data)), 128)
+	g := NewLexer(bytes.NewBuffer([]byte(data)), 128)
 	g.state = stateStart
 	for i := 0; i < 100; i++ {
 		var token Token
@@ -184,10 +162,10 @@ func TestTokenGetter_compose(t *testing.T) {
 			break
 		}
 		if res[i].typ != token.Type || !bytes.Equal(res[i].raw, token.Raw) {
-			t.Fatal("type or raw error")
+			t.Fatalf("type or raw error at %d", i)
 		}
 		if res[i].row != 0 && res[i].col != 0 && (res[i].row != token.Row || res[i].col != token.Col) {
-			t.Fatal("col or row error")
+			t.Fatalf("col or row error at %d", i)
 		}
 	}
 }

@@ -11,8 +11,9 @@ type Error struct {
 }
 
 const (
-	UnexpectedChar err_ = "unexpected char"
-	UnexpectedEOF  err_ = "unexpected eof"
+	UnexpectedChar  err_ = "unexpected char"
+	UnexpectedToken err_ = "unexpected token"
+	UnexpectedEOF   err_ = "unexpected eof"
 )
 
 var (

@@ -52,11 +52,11 @@ var (
 	}
 )
 
-type TokenGetter interface {
+type lexer interface {
 	NextToken(token *Token) error
 }
 
-type tokenGetter struct {
+type lexer_ struct {
 	source        io.Reader
 	row, col      int
 	offset        int
@@ -71,8 +71,8 @@ type tokenGetter struct {
 	keyword       [][]byte
 }
 
-func NewTokenGetter(source io.Reader, bufSize uint) *tokenGetter {
-	return &tokenGetter{
+func NewLexer(source io.Reader, bufSize uint) *lexer_ {
+	return &lexer_{
 		source: source,
 		row:    0, col: 0, offset: 0,
 		buf: make([]byte, bufSize), max: 0,
@@ -81,7 +81,7 @@ func NewTokenGetter(source io.Reader, bufSize uint) *tokenGetter {
 	}
 }
 
-func (g *tokenGetter) NextToken(token *Token) (err error) {
+func (g *lexer_) NextToken(token *Token) (err error) {
 	var b byte
 	var catched bool
 	for {
@@ -136,7 +136,7 @@ func (g *tokenGetter) NextToken(token *Token) (err error) {
 	}
 }
 
-func (g *tokenGetter) matchAnd(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchAnd(b byte, token *Token) (bool, error) {
 	if b == '&' {
 		g.state = stateAnd
 		g.addToStash(b)
@@ -145,7 +145,7 @@ func (g *tokenGetter) matchAnd(b byte, token *Token) (bool, error) {
 	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) matchKeyword(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchKeyword(b byte, token *Token) (bool, error) {
 	for i := 0; i < len(g.keyword); i++ {
 		if len(g.keyword[i]) == 0 {
 			if matched, catched := g.matchEndable(b, token); matched {
@@ -182,7 +182,7 @@ func (g *tokenGetter) matchKeyword(b byte, token *Token) (bool, error) {
 	}
 }
 
-func (g *tokenGetter) matchLogicOperatorStarted(b byte, token *Token, next parseState) (bool, error) {
+func (g *lexer_) matchLogicOperatorStarted(b byte, token *Token, next parseState) (bool, error) {
 	switch {
 	case b == '=':
 		g.state = next
@@ -192,13 +192,13 @@ func (g *tokenGetter) matchLogicOperatorStarted(b byte, token *Token, next parse
 	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) matchEOF(token *Token) error {
+func (g *lexer_) matchEOF(token *Token) error {
 	err := &Error{
 		Info: UnexpectedEOF,
 		Row:  g.row,
 		Col:  g.col,
 	}
-	if g.state != stateEOF {
+	if g.state != stateEOF && g.state != stateWhitespace {
 		switch {
 		case stateTrue == g.state && !bytes.Equal(g.stash[:4], []byte{'t', 'r', 'u', 'e'}):
 			return err
@@ -216,7 +216,7 @@ func (g *tokenGetter) matchEOF(token *Token) error {
 	return nil
 }
 
-func (g *tokenGetter) matchNumber(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchNumber(b byte, token *Token) (bool, error) {
 	switch {
 	case g.isNumber(b) || b == '.':
 		g.addToStash(b)
@@ -225,7 +225,7 @@ func (g *tokenGetter) matchNumber(b byte, token *Token) (bool, error) {
 	return g.matchNormal(b, token)
 }
 
-func (g *tokenGetter) matchString(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchString(b byte, token *Token) (bool, error) {
 	switch b {
 	case '"':
 		if g.slashOpenned {
@@ -244,7 +244,7 @@ func (g *tokenGetter) matchString(b byte, token *Token) (bool, error) {
 	return false, nil
 }
 
-func (g *tokenGetter) matchStart(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchStart(b byte, token *Token) (bool, error) {
 	if b == 0 {
 		return false, nil
 	}
@@ -252,7 +252,7 @@ func (g *tokenGetter) matchStart(b byte, token *Token) (bool, error) {
 	return false, err
 }
 
-func (g *tokenGetter) matchVoid(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchVoid(b byte, token *Token) (bool, error) {
 	switch b {
 	case 't':
 		g.keyword = [][]byte{{'r', 'u', 'e'}}
@@ -275,19 +275,18 @@ func (g *tokenGetter) matchVoid(b byte, token *Token) (bool, error) {
 	return g.matchNormal(b, token)
 }
 
-func (g *tokenGetter) matchWhitespace(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchWhitespace(b byte, token *Token) (bool, error) {
 	if g.isWhitespace(b) {
-		g.addToStash(b)
 		return false, nil
 	}
 	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) matchBlockSeperator(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchBlockSeperator(b byte, token *Token) (bool, error) {
 	return g.matchVoid(b, token)
 }
 
-func (g *tokenGetter) matchVariable(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchVariable(b byte, token *Token) (bool, error) {
 	switch {
 	case g.isVarChar(b):
 		g.addToStash(b)
@@ -298,7 +297,7 @@ func (g *tokenGetter) matchVariable(b byte, token *Token) (bool, error) {
 	return g.matchNormal(b, token)
 }
 
-func (g *tokenGetter) matchNormal(b byte, token *Token) (bool, error) {
+func (g *lexer_) matchNormal(b byte, token *Token) (bool, error) {
 	if matched, catched := g.matchEndable(b, token); matched {
 		return catched, nil
 	}
@@ -314,7 +313,7 @@ func (g *tokenGetter) matchNormal(b byte, token *Token) (bool, error) {
 	return false, &Error{Row: g.row, Col: g.col, Info: UnexpectedChar, CurrentBytes: []byte{b}}
 }
 
-func (g *tokenGetter) matchEndable(b byte, token *Token) (matched bool, catched bool) {
+func (g *lexer_) matchEndable(b byte, token *Token) (matched bool, catched bool) {
 	switch b {
 	case '{', '}', '[', ']', ',', '(', ')', ':':
 		return true, g.shiftState(b, stateBlockSeperator, token)
@@ -335,7 +334,7 @@ func (g *tokenGetter) matchEndable(b byte, token *Token) (matched bool, catched 
 	return false, false
 }
 
-func (g *tokenGetter) nextChar(b *byte) error {
+func (g *lexer_) nextChar(b *byte) error {
 	if g.offset == g.max {
 		var err error
 		for {
@@ -353,9 +352,9 @@ func (g *tokenGetter) nextChar(b *byte) error {
 	return nil
 }
 
-func (g *tokenGetter) shiftState(b byte, state parseState, token *Token) bool {
+func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 	catched := false
-	if g.stashOffset > 0 && g.state != stateStart {
+	if g.stashOffset > 0 && g.state != stateStart && g.state != stateWhitespace {
 		token.Type = func() TokenType {
 			switch g.state {
 			case stateVar:
@@ -393,14 +392,18 @@ func (g *tokenGetter) shiftState(b byte, state parseState, token *Token) bool {
 		g.fillToken(token, b)
 		catched = true
 	}
-	if b != 0 {
+	if g.state == stateWhitespace && state != stateWhitespace {
+		g.stashStartRow = g.row
+		g.stashStartCol = g.col
+	}
+	if stateWhitespace != state && b != 0 {
 		g.addToStash(b)
 	}
 	g.state = state
 	return catched
 }
 
-func (g *tokenGetter) addToStash(b byte) {
+func (g *lexer_) addToStash(b byte) {
 	if len(g.stash) <= g.stashOffset {
 		stash := make([]byte, len(g.stash)*2)
 		copy(stash, g.stash)
@@ -410,7 +413,7 @@ func (g *tokenGetter) addToStash(b byte) {
 	g.stashOffset++
 }
 
-func (g *tokenGetter) clearStash(next byte) {
+func (g *lexer_) clearStash(next byte) {
 	if len(g.stash) != stashSize {
 		g.stash = make([]byte, stashSize)
 	}
@@ -422,7 +425,7 @@ func (g *tokenGetter) clearStash(next byte) {
 	}
 }
 
-func (g *tokenGetter) fillToken(token *Token, next byte) {
+func (g *lexer_) fillToken(token *Token, next byte) {
 	token.Raw = make([]byte, g.stashOffset)
 	switch token.Type {
 	case TokenEOF, TokenAssignation:
@@ -434,26 +437,26 @@ func (g *tokenGetter) fillToken(token *Token, next byte) {
 	g.clearStash(next)
 }
 
-func (g *tokenGetter) isWhitespace(b byte) bool {
+func (g *lexer_) isWhitespace(b byte) bool {
 	return b == '\n' || b == '\t' || b == ' '
 }
 
-func (g *tokenGetter) isVarChar(b byte) bool {
+func (g *lexer_) isVarChar(b byte) bool {
 	return g.isAlpha(b) || g.isNumber(b) || b == '_' || b == '.'
 }
 
-func (g *tokenGetter) isAlpha(b byte) bool {
+func (g *lexer_) isAlpha(b byte) bool {
 	return g.isLowerCaseAlpha(b) || g.isUpperCaseAlpha(b)
 }
 
-func (g *tokenGetter) isLowerCaseAlpha(b byte) bool {
+func (g *lexer_) isLowerCaseAlpha(b byte) bool {
 	return b >= 'a' && b <= 'z'
 }
 
-func (g *tokenGetter) isUpperCaseAlpha(b byte) bool {
+func (g *lexer_) isUpperCaseAlpha(b byte) bool {
 	return b >= 'A' && b <= 'Z'
 }
 
-func (g *tokenGetter) isNumber(b byte) bool {
+func (g *lexer_) isNumber(b byte) bool {
 	return b >= '0' && b <= '9'
 }

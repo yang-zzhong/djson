@@ -29,17 +29,6 @@ var (
 	}
 )
 
-type variable struct {
-	typ  variableType
-	name []byte
-	val  []byte
-}
-
-type pair struct {
-	key []byte
-	val variable
-}
-
 type scope struct {
 	typ      scopeType
 	vars     []variable
