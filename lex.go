@@ -71,6 +71,63 @@ type lexer_ struct {
 	keyword       [][]byte
 }
 
+type tokenNexter struct {
+	lexer       lexer
+	token       Token
+	tokenUnused bool
+	ends        [][]byte
+	ended       bool
+}
+
+func newTokenNexter(l lexer, ends [][]byte, startToken ...Token) *tokenNexter {
+	n := &tokenNexter{
+		lexer: l,
+		ends:  ends,
+	}
+	if len(startToken) > 0 {
+		n.token = startToken[0]
+		n.tokenUnused = true
+	}
+	return n
+}
+
+func (t *tokenNexter) next() (end bool, err error) {
+	if t.tokenUnused || t.ended {
+		end = t.ended
+		return
+	}
+	if err = t.lexer.NextToken(&t.token); err != nil {
+		return
+	}
+	if t.token.Type == TokenEOF {
+		t.useToken(func(_ Token) {
+			end = true
+			t.ended = end
+		})
+		return
+	}
+	t.tokenUnused = true
+	for _, ed := range t.ends {
+		if bytes.Equal(ed, t.token.Raw) {
+			t.useToken(func(_ Token) {
+				end = true
+				t.ended = end
+			})
+			return
+		}
+	}
+	return
+}
+
+func (t *tokenNexter) useToken(use func(token Token)) {
+	t.tokenUnused = false
+	use(t.token)
+}
+
+func (t *tokenNexter) endAt() []byte {
+	return t.token.Raw
+}
+
 func NewLexer(source io.Reader, bufSize uint) *lexer_ {
 	return &lexer_{
 		source: source,

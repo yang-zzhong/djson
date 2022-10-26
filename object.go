@@ -1,6 +1,9 @@
 package djson
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+)
 
 type object []pair
 
@@ -42,7 +45,7 @@ func (obj *object) del(key []byte) {
 type objectExecutor struct {
 	getter    lexer
 	variables *variables
-	value     array
+	value     object
 }
 
 func newObjectExecutor(getter lexer, vs *variables) *objectExecutor {
@@ -57,6 +60,24 @@ func (e *objectExecutor) execute() (err error) {
 	return
 }
 
-func (e *objectExecutor) pairs() (val array, err error) {
-	return
+func (e *objectExecutor) pairs() (val object, err error) {
+	for {
+		expr := newExpr(e.getter, [][]byte{{':'}}, e.variables)
+		if err = expr.execute(); err != nil {
+			return
+		}
+		if expr.value.typ != valueString {
+			err = errors.New("object key must be string")
+			return
+		}
+		key := expr.value.value.([]byte)
+		expr = newExpr(e.getter, [][]byte{{','}, {'}'}}, e.variables)
+		if err = expr.execute(); err != nil {
+			return
+		}
+		val.set(key, expr.value)
+		if bytes.Equal(expr.endAt(), []byte{'}'}) {
+			return
+		}
+	}
 }
