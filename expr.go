@@ -2,8 +2,6 @@ package djson
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -29,13 +27,18 @@ type expr struct {
 	ended       bool
 }
 
-func newExpr(getter lexer, ends [][]byte, vars *variables) *expr {
-	return &expr{
+func newExpr(getter lexer, ends [][]byte, vars *variables, ahead ...*Token) *expr {
+	e := &expr{
 		getter:    getter,
 		ends:      ends,
 		variables: vars,
 		value:     value{typ: valueNull},
 	}
+	if len(ahead) > 0 {
+		e.ahead = *ahead[0]
+		e.tokenUnused = true
+	}
+	return e
 }
 
 func (e *expr) endAt() []byte {
@@ -187,16 +190,31 @@ func (e *expr) factor() (val value, err error) {
 		})
 		return
 	case TokenBlockStart:
-		e.useToken(func() {
-			if !bytes.Equal(e.ahead.Raw, []byte{'('}) {
-				err = ErrFromToken(UnexpectedToken, token)
-				return
-			}
-			sub := newExpr(e.getter, [][]byte{{')'}}, e.variables)
-			if err = sub.execute(); err == nil {
-				val = sub.value
-			}
-		})
+		if bytes.Equal([]byte{'('}, e.ahead.Raw) {
+			e.useToken(func() {
+				sub := newExpr(e.getter, append(e.ends, []byte{')'}), e.variables)
+				if err = sub.execute(); err == nil {
+					val = sub.value
+				}
+			})
+		} else if bytes.Equal([]byte{'['}, e.ahead.Raw) {
+			e.useToken(func() {
+				sub := newArrayExecutor(e.getter, e.variables)
+				if err = sub.execute(); err == nil {
+					val = value{typ: valueArray, value: sub.value}
+				}
+			})
+		} else if bytes.Equal([]byte{'{'}, e.ahead.Raw) {
+			e.useToken(func() {
+				sub := newObjectExecutor(e.getter, e.variables)
+				if err = sub.execute(); err == nil {
+					val = value{typ: valueObject, value: sub.value}
+				}
+			})
+		} else {
+			err = ErrFromToken(UnexpectedToken, token)
+			return
+		}
 		return
 	}
 	err = ErrFromToken(UnexpectedToken, token)
@@ -204,19 +222,19 @@ func (e *expr) factor() (val value, err error) {
 }
 
 func (e *expr) add(left, right value) (value, error) {
-	return e.arithmatic(left, right, '+')
+	return left.add(right)
 }
 
 func (e *expr) minus(left, right value) (value, error) {
-	return e.arithmatic(left, right, '-')
+	return left.minus(right)
 }
 
 func (e *expr) multiply(left, right value) (value, error) {
-	return e.arithmatic(left, right, '*')
+	return left.multiply(right)
 }
 
 func (e *expr) devide(left, right value) (value, error) {
-	return e.arithmatic(left, right, '/')
+	return left.devide(right)
 }
 
 func (e *expr) next() (end bool, err error) {
@@ -284,62 +302,6 @@ func (e *expr) toBool(val value) bool {
 	default:
 		return false
 	}
-}
-
-func (e *expr) arithmatic(left, right value, operator byte) (val value, err error) {
-	switch left.typ {
-	case valueNull:
-		return right, nil
-	case valueInt, valueFloat:
-		if right.typ != left.typ {
-			err = errors.New("type not match")
-			return
-		}
-		switch operator {
-		case '+':
-			val.typ = left.typ
-			if left.typ == valueInt {
-				val.value = left.value.(int64) + right.value.(int64)
-			} else if left.typ == valueFloat {
-				val.value = left.value.(float64) + right.value.(float64)
-			}
-		case '-':
-			val.typ = left.typ
-			if left.typ == valueInt {
-				val.value = left.value.(int64) - right.value.(int64)
-			} else if left.typ == valueFloat {
-				val.value = left.value.(float64) - right.value.(float64)
-			}
-		case '*':
-			val.typ = left.typ
-			if left.typ == valueInt {
-				val.value = left.value.(int64) * right.value.(int64)
-			} else if left.typ == valueFloat {
-				val.value = left.value.(float64) * right.value.(float64)
-			}
-		case '/':
-			val.typ = left.typ
-			if left.typ == valueInt {
-				val.value = left.value.(int64) / right.value.(int64)
-			} else if left.typ == valueFloat {
-				val.value = left.value.(float64) / right.value.(float64)
-			}
-		}
-	case valueString:
-		if operator != '+' {
-			err = fmt.Errorf("unsupported string operator [%s]", []byte{operator})
-			return
-		}
-		if right.typ != valueString {
-			err = errors.New("type not match")
-			return
-		}
-		val.typ = valueString
-		val.value = append(left.value.([]byte), right.value.([]byte)...)
-	default:
-		err = errors.New("unsupported type to arithmatic")
-	}
-	return
 }
 
 func (e *expr) number(bs []byte) value {

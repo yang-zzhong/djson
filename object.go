@@ -38,3 +38,25 @@ func (obj *object) del(key []byte) {
 		*obj = append((*obj)[0:i], (*obj)[i+1:]...)
 	}
 }
+
+type objectExecutor struct {
+	getter    lexer
+	variables *variables
+	value     array
+}
+
+func newObjectExecutor(getter lexer, vs *variables) *objectExecutor {
+	return &objectExecutor{
+		getter:    getter,
+		variables: vs,
+	}
+}
+
+func (e *objectExecutor) execute() (err error) {
+	e.value, err = e.pairs()
+	return
+}
+
+func (e *objectExecutor) pairs() (val array, err error) {
+	return
+}
