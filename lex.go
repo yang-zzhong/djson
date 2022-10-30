@@ -11,14 +11,14 @@ type parseState int
 const (
 	stateStart = parseState(iota)
 	stateWhitespace
-	stateVar
+	stateIdentifier
 	stateBlockSeperator
 	stateString
-	stateBool
 	stateNumber
 	stateVoid
 	stateEqStarted
 	stateEq
+	stateReduction
 	stateLt
 	stateGt
 	stateGte
@@ -28,7 +28,6 @@ const (
 	stateTrue
 	stateFalse
 	stateNull
-	stateKeyword
 	stateAnd
 	stateOr
 	stateAndStarted
@@ -37,19 +36,6 @@ const (
 
 const (
 	stashSize = 256
-)
-
-var (
-	keywords = [][]byte{
-		{'g', 'e', 't'},
-		{'s', 'e', 't'},
-		{'d', 'e', 'l'},
-		{'c', 'o', 'n'},
-		{'G', 'E', 'T'},
-		{'S', 'E', 'T'},
-		{'D', 'E', 'L'},
-		{'C', 'O', 'N'},
-	}
 )
 
 type lexer interface {
@@ -160,7 +146,7 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 			catched, err = g.matchStart(b, token)
 		case stateWhitespace:
 			catched, err = g.matchWhitespace(b, token)
-		case stateVar:
+		case stateIdentifier:
 			catched, err = g.matchVariable(b, token)
 		case stateBlockSeperator:
 			catched, err = g.matchBlockSeperator(b, token)
@@ -171,12 +157,12 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 		case stateNumber:
 			catched, err = g.matchNumber(b, token)
 		case stateEqStarted:
-			catched, err = g.matchLogicOperatorStarted(b, token, stateEq)
+			catched, err = g.matchLogicEq(b, token)
 		case stateLt:
-			catched, err = g.matchLogicOperatorStarted(b, token, stateLte)
+			catched, err = g.matchLogicLte(b, token)
 		case stateGt:
-			catched, err = g.matchLogicOperatorStarted(b, token, stateGte)
-		case stateTrue, stateFalse, stateKeyword, stateNull:
+			catched, err = g.matchLogicGte(b, token)
+		case stateTrue, stateFalse, stateNull:
 			catched, err = g.matchKeyword(b, token)
 		case stateAndStarted:
 			catched, err = g.matchAnd(b, token)
@@ -221,7 +207,7 @@ func (g *lexer_) matchKeyword(b byte, token *Token) (bool, error) {
 		g.keyword = append(g.keyword[:i], g.keyword[i+1:]...)
 		i--
 	}
-	g.state = stateVar
+	g.state = stateIdentifier
 	if matched, catched := g.matchEndable(b, token); matched {
 		g.keyword = [][]byte{}
 		return catched, nil
@@ -239,10 +225,32 @@ func (g *lexer_) matchKeyword(b byte, token *Token) (bool, error) {
 	}
 }
 
-func (g *lexer_) matchLogicOperatorStarted(b byte, token *Token, next parseState) (bool, error) {
+func (g *lexer_) matchLogicEq(b byte, token *Token) (bool, error) {
 	switch {
 	case b == '=':
-		g.state = next
+		g.state = stateEq
+		g.addToStash(b)
+		return g.shiftState(0, stateVoid, token), nil
+	case b == '>':
+		g.state = stateReduction
+		g.addToStash(b)
+		return g.shiftState(0, stateVoid, token), nil
+	}
+	return g.matchVoid(b, token)
+}
+
+func (g *lexer_) matchLogicGte(b byte, token *Token) (bool, error) {
+	if b == '=' {
+		g.state = stateGte
+		g.addToStash(b)
+		return g.shiftState(0, stateVoid, token), nil
+	}
+	return g.matchVoid(b, token)
+}
+
+func (g *lexer_) matchLogicLte(b byte, token *Token) (bool, error) {
+	if b == '=' {
+		g.state = stateLte
 		g.addToStash(b)
 		return g.shiftState(0, stateVoid, token), nil
 	}
@@ -321,14 +329,6 @@ func (g *lexer_) matchVoid(b byte, token *Token) (bool, error) {
 		g.keyword = [][]byte{{'u', 'l', 'l'}}
 		return g.shiftState(b, stateNull, token), nil
 	}
-	for _, keyword := range keywords {
-		if keyword[0] == b {
-			g.keyword = append(g.keyword, keyword[1:])
-		}
-	}
-	if len(g.keyword) > 0 {
-		return g.shiftState(b, stateKeyword, token), nil
-	}
 	return g.matchNormal(b, token)
 }
 
@@ -365,14 +365,14 @@ func (g *lexer_) matchNormal(b byte, token *Token) (bool, error) {
 	case g.isNumber(b):
 		return g.shiftState(b, stateNumber, token), nil
 	case g.isAlpha(b):
-		return g.shiftState(b, stateVar, token), nil
+		return g.shiftState(b, stateIdentifier, token), nil
 	}
 	return false, &Error{Row: g.row, Col: g.col, Info: UnexpectedChar, CurrentBytes: []byte{b}}
 }
 
 func (g *lexer_) matchEndable(b byte, token *Token) (matched bool, catched bool) {
 	switch b {
-	case '{', '}', '[', ']', ',', '(', ')', ':':
+	case '{', '}', '[', ']', ',', '(', ')', ':', '.':
 		return true, g.shiftState(b, stateBlockSeperator, token)
 	case '=':
 		return true, g.shiftState(b, stateEqStarted, token)
@@ -414,33 +414,45 @@ func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 	if g.stashOffset > 0 && g.state != stateStart && g.state != stateWhitespace {
 		token.Type = func() TokenType {
 			switch g.state {
-			case stateVar:
-				return TokenVariable
+			case stateIdentifier:
+				return TokenIdentifier
 			case stateBlockSeperator:
-				switch g.stash[0] {
-				case '[', '(', '{':
-					return TokenBlockStart
-				case ']', ')', '}':
-					return TokenBlockEnd
-				case ',', ':':
-					return TokenBlockSeperator
+				seperators := map[byte]TokenType{
+					'[': TokenBracketsOpen,
+					']': TokenBracketsClose,
+					'{': TokenBraceOpen,
+					'}': TokenBraceClose,
+					'(': TokenParenthesesOpen,
+					')': TokenParenthesesClose,
+					':': TokenColon,
+					'.': TokenDot,
+					',': TokenComma,
 				}
-			case stateKeyword:
-				return TokenKeyword
-			case stateEq, stateGt, stateGte, stateLt, stateLte:
-				return TokenComparation
+				return seperators[g.stash[0]]
+			case stateEq:
+				return TokenEqual
+			case stateGt:
+				return TokenGreateThan
+			case stateGte:
+				return TokenGreateThanEqual
+			case stateLt:
+				return TokenLessThan
+			case stateLte:
+				return TokenLessThanEqual
 			case stateAssign:
 				return TokenAssignation
 			case stateNumber:
 				return TokenNumber
 			case stateString:
 				return TokenString
-			case stateTrue, stateFalse:
-				return TokenBoolean
-			case stateAnd, stateOr:
-				return TokenLogicOperator
-			case stateWhitespace:
-				return TokenWhitespace
+			case stateTrue:
+				return TokenTrue
+			case stateFalse:
+				return TokenFalse
+			case stateAnd:
+				return TokenAnd
+			case stateOr:
+				return TokenOr
 			case stateNull:
 				return TokenNull
 			}
@@ -483,10 +495,8 @@ func (g *lexer_) clearStash(next byte) {
 }
 
 func (g *lexer_) fillToken(token *Token, next byte) {
-	token.Raw = make([]byte, g.stashOffset)
-	switch token.Type {
-	case TokenEOF, TokenAssignation:
-	default:
+	if !exclodeRawToken(token.Type) {
+		token.Raw = make([]byte, g.stashOffset)
 		copy(token.Raw, g.stash[:g.stashOffset])
 	}
 	token.Row = g.stashStartRow

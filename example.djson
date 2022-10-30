@@ -7,19 +7,26 @@ maps = {
   "b": "b",
 }
 
-maps SET <k,v>(k == "hello") {
-  k: "c"
-}, (k > "hello") {
-  k: "d"
+maps.hello = "hello"
+
+maps.set(k > "hello" => "new" + v)
+
+maps.replace(k > "hello" => {"new" + k: "new" + v)
+
+maps.filter(k > "hello")
+
+maps.del(k > "hello")
+
+maps.keys(k == "hello")
+
+maps.values(k == "hello")
+
+maps.merge({"hello_1": "hello_1"})
+
+maps + {
+    "hello_1": "hello_1"
 }
 
-maps DEL <k,v>(k == "hello")
+arr.set(i > 3 => v + " v > 3")
 
-maps GET <k,v>(k != "hello")
-
-maps CON {"hello": "world"}
-
-{
-  "hello": (self.world),
-  "world": maps CON {"hello": "world"}
-}
+arr.set(i > 3 => v + " v > 3")

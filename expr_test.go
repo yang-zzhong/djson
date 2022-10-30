@@ -22,9 +22,9 @@ func TestExpr(t *testing.T) {
 	// 5 + 2 - 1
 	g := &getter{tokens: []*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
-		{Type: TokenOperator, Raw: []byte{'+'}},
+		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
-		{Type: TokenOperator, Raw: []byte{'-'}},
+		{Type: TokenMinus},
 		{Type: TokenNumber, Raw: []byte{'1'}},
 	}}
 	expr := newExpr(g, nil, nil)
@@ -37,9 +37,9 @@ func TestExpr(t *testing.T) {
 	// 5 + 2 * 3
 	g = &getter{tokens: []*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
-		{Type: TokenOperator, Raw: []byte{'+'}},
+		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
-		{Type: TokenOperator, Raw: []byte{'*'}},
+		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	}}
 	expr = newExpr(g, nil, nil)
@@ -51,12 +51,12 @@ func TestExpr(t *testing.T) {
 	}
 	// (5 + 2) * 3
 	g = &getter{tokens: []*Token{
-		{Type: TokenBlockStart, Raw: []byte{'('}},
+		{Type: TokenParenthesesOpen},
 		{Type: TokenNumber, Raw: []byte{'5'}},
-		{Type: TokenOperator, Raw: []byte{'+'}},
+		{Type: TokenAddition, Raw: []byte{'+'}},
 		{Type: TokenNumber, Raw: []byte{'2'}},
-		{Type: TokenBlockEnd, Raw: []byte{')'}},
-		{Type: TokenOperator, Raw: []byte{'*'}},
+		{Type: TokenParenthesesClose},
+		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	}}
 	expr = newExpr(g, nil, nil)
@@ -69,7 +69,7 @@ func TestExpr(t *testing.T) {
 	// "hello" + "world"
 	g = &getter{tokens: []*Token{
 		{Type: TokenString, Raw: []byte("\"hello\"")},
-		{Type: TokenOperator, Raw: []byte{'+'}},
+		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("\"world\"")},
 	}}
 	expr = newExpr(g, nil, nil)

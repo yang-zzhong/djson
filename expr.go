@@ -89,8 +89,8 @@ func (e *expr) expr() (val value, err error) {
 		if end, err = e.n.next(); err != nil || end {
 			return
 		}
-		switch {
-		case bytes.Equal([]byte{'+'}, e.n.token.Raw):
+		switch e.n.token.Type {
+		case TokenAddition:
 			e.useToken(func() {
 				var term value
 				term, err = e.term()
@@ -99,7 +99,7 @@ func (e *expr) expr() (val value, err error) {
 				}
 				val, err = val.add(term)
 			})
-		case bytes.Equal([]byte{'-'}, e.n.token.Raw):
+		case TokenMinus:
 			e.useToken(func() {
 				var term value
 				term, err = e.term()
@@ -125,14 +125,14 @@ func (e *expr) term() (val value, err error) {
 		if end, err = e.n.next(); err != nil || end {
 			return
 		}
-		switch {
-		case bytes.Equal([]byte{'*'}, e.n.token.Raw):
+		switch e.n.token.Type {
+		case TokenMultiplication:
 			e.useToken(func() {
 				var factor value
 				factor, err = e.factor()
 				val, err = val.multiply(factor)
 			})
-		case bytes.Equal([]byte{'/'}, e.n.token.Raw):
+		case TokenDevision:
 			e.useToken(func() {
 				var factor value
 				factor, err = e.factor()
@@ -156,7 +156,7 @@ func (e *expr) factor() (val value, err error) {
 	}
 	token := &e.n.token
 	switch token.Type {
-	case TokenVariable:
+	case TokenIdentifier:
 		e.useToken(func() {
 			val = e.variables.lookup(token.Raw)
 			if val.typ == valueNull {
@@ -174,32 +174,29 @@ func (e *expr) factor() (val value, err error) {
 			val = e.number(token.Raw)
 		})
 		return
-	case TokenBlockStart:
-		if bytes.Equal([]byte{'('}, token.Raw) {
-			e.useToken(func() {
-				sub := newExpr(e.n.lexer, append(e.n.ends, []byte{')'}), e.variables)
-				if err = sub.execute(); err == nil {
-					val = sub.value
-				}
-			})
-		} else if bytes.Equal([]byte{'['}, token.Raw) {
-			e.useToken(func() {
-				sub := newArrayExecutor(e.n.lexer, e.variables)
-				if err = sub.execute(); err == nil {
-					val = value{typ: valueArray, value: sub.value}
-				}
-			})
-		} else if bytes.Equal([]byte{'{'}, token.Raw) {
-			e.useToken(func() {
-				sub := newObjectExecutor(e.n.lexer, e.variables)
-				if err = sub.execute(); err == nil {
-					val = value{typ: valueObject, value: sub.value}
-				}
-			})
-		} else {
-			err = ErrFromToken(UnexpectedToken, token)
-			return
-		}
+	case TokenParenthesesOpen:
+		e.useToken(func() {
+			sub := newExpr(e.n.lexer, append(e.n.ends, []byte{')'}), e.variables)
+			if err = sub.execute(); err == nil {
+				val = sub.value
+			}
+		})
+	case TokenBracketsOpen:
+		e.useToken(func() {
+			sub := newArrayExecutor(e.n.lexer, e.variables)
+			if err = sub.execute(); err == nil {
+				val = value{typ: valueArray, value: sub.value}
+			}
+		})
+	case TokenBraceOpen:
+		e.useToken(func() {
+			sub := newObjectExecutor(e.n.lexer, e.variables)
+			if err = sub.execute(); err == nil {
+				val = value{typ: valueObject, value: sub.value}
+			}
+		})
+	default:
+		err = ErrFromToken(UnexpectedToken, token)
 		return
 	}
 	err = ErrFromToken(UnexpectedToken, token)

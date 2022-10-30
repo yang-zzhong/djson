@@ -3,23 +3,35 @@ package djson
 type TokenType int
 
 const (
-	TokenMapOpen        = TokenType(iota) // {
-	TokenMapClose                         // }
-	TokenWhitespace                       // '\n', '\t', ' '
-	TokenVariable                         // variable
-	TokenBlockStart                       //  [  <  (
-	TokenBlockEnd                         //  ]  >  }
-	TokenBlockSeperator                   //  , :
-	TokenAssignation                      // =
-	TokenComparation                      // == < > <= >=
-	TokenLogicOperator                    // || &&
-	TokenOperator                         // + - * / %
-	TokenEOF                              // eof
-	TokenNumber                           // number
-	TokenKeyword                          // keyword
-	TokenString                           // string
-	TokenBoolean                          // boolean
-	TokenNull                             // null
+	TokenBraceOpen        = TokenType(iota) // {
+	TokenBraceClose                         // }
+	TokenBracketsOpen                       //  [
+	TokenBracketsClose                      //  ]
+	TokenParenthesesOpen                    //  (
+	TokenParenthesesClose                   //  )
+	TokenAssignation                        // =
+	TokenEqual                              // ==
+	TokenGreateThan                         // >
+	TokenLessThan                           // <
+	TokenGreateThanEqual                    // >=
+	TokenLessThanEqual                      // <=
+	TokenOr                                 // ||
+	TokenAnd                                // &&
+	TokenAddition                           // +
+	TokenMinus                              // -
+	TokenMultiplication                     // *
+	TokenDevision                           // /
+	TokenColon                              // :
+	TokenComma                              // ,
+	TokenDot                                // .
+	TokenEOF                                // eof
+	TokenNull                               // null
+	TokenTrue                               // true
+	TokenFalse                              // false
+	TokenReduction                          // =>
+	TokenNumber                             // number
+	TokenString                             // string
+	TokenIdentifier                         // identifier
 )
 
 type Token struct {
@@ -28,10 +40,39 @@ type Token struct {
 	Row, Col int
 }
 
-func (token *Token) IsTemplateStart() bool {
-	return token.Type == TokenComparation && token.Raw[0] == '<'
-}
-
-func (token *Token) IsTemplateEnd() bool {
-	return token.Type == TokenComparation && token.Raw[0] == '>'
+func exclodeRawToken(tokenType TokenType) bool {
+	tokens := []TokenType{
+		TokenBraceOpen,
+		TokenBraceClose,
+		TokenBracketsOpen,
+		TokenBracketsClose,
+		TokenParenthesesOpen,
+		TokenParenthesesClose,
+		TokenAssignation,
+		TokenEqual,
+		TokenGreateThan,
+		TokenLessThan,
+		TokenGreateThanEqual,
+		TokenLessThanEqual,
+		TokenOr,
+		TokenAnd,
+		TokenAddition,
+		TokenMinus,
+		TokenMultiplication,
+		TokenDevision,
+		TokenDot,
+		TokenEOF,
+		TokenNull,
+		TokenTrue,
+		TokenFalse,
+		TokenColon,
+		TokenComma,
+		TokenReduction,
+	}
+	for _, t := range tokens {
+		if t == tokenType {
+			return true
+		}
+	}
+	return false
 }
