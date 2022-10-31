@@ -181,6 +181,7 @@ func (e *expr) factor() (val value, err error) {
 				val = sub.value
 			}
 		})
+		return
 	case TokenBracketsOpen:
 		e.useToken(func() {
 			sub := newArrayExecutor(e.n.lexer, e.variables)
@@ -188,6 +189,7 @@ func (e *expr) factor() (val value, err error) {
 				val = value{typ: valueArray, value: sub.value}
 			}
 		})
+		return
 	case TokenBraceOpen:
 		e.useToken(func() {
 			sub := newObjectExecutor(e.n.lexer, e.variables)
@@ -195,17 +197,15 @@ func (e *expr) factor() (val value, err error) {
 				val = value{typ: valueObject, value: sub.value}
 			}
 		})
+		return
 	default:
 		err = ErrFromToken(UnexpectedToken, token)
 		return
 	}
-	err = ErrFromToken(UnexpectedToken, token)
-	return
 }
 
 func (e *expr) number(bs []byte) value {
-	isFloat := bytes.Index(bs, []byte{'.'}) > -1
-	if isFloat {
+	if bytes.Contains(bs, []byte{'.'}) {
 		v, _ := strconv.ParseFloat(string(bs), 64)
 		return value{typ: valueFloat, value: v}
 	}

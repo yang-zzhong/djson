@@ -123,7 +123,7 @@ data = {
 
 		{typ: TokenString, raw: []byte("\"string\""), row: 2, col: 4},
 		{typ: TokenColon, row: 2, col: 12},
-		{typ: TokenString, row: 2, col: 14},
+		{typ: TokenString, raw: []byte("\"123\""), row: 2, col: 14},
 		{typ: TokenComma, row: 2, col: 19},
 
 		{typ: TokenString, raw: []byte("\"int\""), row: 3, col: 4},
@@ -131,7 +131,7 @@ data = {
 		{typ: TokenNumber, raw: []byte("123"), row: 3, col: 11},
 		{typ: TokenComma, row: 3, col: 14},
 
-		{typ: TokenString, raw: []byte("float"), row: 4, col: 4},
+		{typ: TokenString, raw: []byte("\"float\""), row: 4, col: 4},
 		{typ: TokenColon, row: 4, col: 11},
 		{typ: TokenNumber, raw: []byte("1.23"), row: 4, col: 13},
 		{typ: TokenComma, row: 4, col: 17},
@@ -147,9 +147,9 @@ data = {
 		{typ: TokenParenthesesOpen, row: 6, col: 5},
 		{typ: TokenIdentifier, raw: []byte("k"), row: 6, col: 6},
 		{typ: TokenEqual, row: 6, col: 8},
-		{typ: TokenString, raw: []byte("\"string\""), row: 6, col: 9},
-		{typ: TokenReduction, row: 6, col: 21},
-		{typ: TokenIdentifier, raw: []byte("\"v\""), row: 6, col: 23},
+		{typ: TokenString, raw: []byte("\"string\""), row: 6, col: 11},
+		{typ: TokenReduction, row: 6, col: 20},
+		{typ: TokenIdentifier, raw: []byte("v"), row: 6, col: 23},
 		{typ: TokenAddition, row: 6, col: 25},
 		{typ: TokenString, raw: []byte("\"_new\""), row: 6, col: 27},
 		{typ: TokenParenthesesClose, row: 6, col: 33},

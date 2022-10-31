@@ -23,7 +23,6 @@ const (
 	stateGt
 	stateGte
 	stateLte
-	stateAssign
 	stateEOF
 	stateTrue
 	stateFalse
@@ -32,6 +31,10 @@ const (
 	stateOr
 	stateAndStarted
 	stateOrStarted
+	stateAdd
+	stateMinus
+	stateMultiple
+	stateDevide
 )
 
 const (
@@ -156,6 +159,8 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 			catched, err = g.matchVoid(b, token)
 		case stateNumber:
 			catched, err = g.matchNumber(b, token)
+		case stateAnd, stateEq, stateLte, stateGte, stateReduction:
+			catched, err = g.matchComplete(b, token)
 		case stateEqStarted:
 			catched, err = g.matchLogicEq(b, token)
 		case stateLt:
@@ -179,11 +184,15 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 	}
 }
 
+func (g *lexer_) matchComplete(b byte, token *Token) (bool, error) {
+	return g.shiftState(0, stateVoid, token), nil
+}
+
 func (g *lexer_) matchAnd(b byte, token *Token) (bool, error) {
 	if b == '&' {
 		g.state = stateAnd
 		g.addToStash(b)
-		return g.shiftState(0, stateVoid, token), nil
+		return false, nil
 	}
 	return g.matchVoid(b, token)
 }
@@ -230,11 +239,11 @@ func (g *lexer_) matchLogicEq(b byte, token *Token) (bool, error) {
 	case b == '=':
 		g.state = stateEq
 		g.addToStash(b)
-		return g.shiftState(0, stateVoid, token), nil
+		return false, nil
 	case b == '>':
 		g.state = stateReduction
 		g.addToStash(b)
-		return g.shiftState(0, stateVoid, token), nil
+		return false, nil
 	}
 	return g.matchVoid(b, token)
 }
@@ -243,7 +252,7 @@ func (g *lexer_) matchLogicGte(b byte, token *Token) (bool, error) {
 	if b == '=' {
 		g.state = stateGte
 		g.addToStash(b)
-		return g.shiftState(0, stateVoid, token), nil
+		return false, nil
 	}
 	return g.matchVoid(b, token)
 }
@@ -252,7 +261,7 @@ func (g *lexer_) matchLogicLte(b byte, token *Token) (bool, error) {
 	if b == '=' {
 		g.state = stateLte
 		g.addToStash(b)
-		return g.shiftState(0, stateVoid, token), nil
+		return false, nil
 	}
 	return g.matchVoid(b, token)
 }
@@ -376,6 +385,14 @@ func (g *lexer_) matchEndable(b byte, token *Token) (matched bool, catched bool)
 		return true, g.shiftState(b, stateBlockSeperator, token)
 	case '=':
 		return true, g.shiftState(b, stateEqStarted, token)
+	case '+':
+		return true, g.shiftState(b, stateAdd, token)
+	case '-':
+		return true, g.shiftState(b, stateMinus, token)
+	case '*':
+		return true, g.shiftState(b, stateMultiple, token)
+	case '/':
+		return true, g.shiftState(b, stateDevide, token)
 	case '<':
 		return true, g.shiftState(b, stateLt, token)
 	case '>':
@@ -429,6 +446,16 @@ func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 					',': TokenComma,
 				}
 				return seperators[g.stash[0]]
+			case stateReduction:
+				return TokenReduction
+			case stateAdd:
+				return TokenAddition
+			case stateMinus:
+				return TokenMinus
+			case stateMultiple:
+				return TokenMultiplication
+			case stateDevide:
+				return TokenDevision
 			case stateEq:
 				return TokenEqual
 			case stateGt:
@@ -439,7 +466,7 @@ func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 				return TokenLessThan
 			case stateLte:
 				return TokenLessThanEqual
-			case stateAssign:
+			case stateEqStarted:
 				return TokenAssignation
 			case stateNumber:
 				return TokenNumber

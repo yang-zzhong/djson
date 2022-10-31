@@ -53,7 +53,7 @@ func TestExpr(t *testing.T) {
 	g = &getter{tokens: []*Token{
 		{Type: TokenParenthesesOpen},
 		{Type: TokenNumber, Raw: []byte{'5'}},
-		{Type: TokenAddition, Raw: []byte{'+'}},
+		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
 		{Type: TokenParenthesesClose},
 		{Type: TokenMultiplication},
