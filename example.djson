@@ -5,13 +5,18 @@ a = {
 maps = {
   "a": "a",
   "b": "b",
+  "c": _me.a + _me.b,
+  "d": [
+    _me._p.a,
+    _me._p.b,
+  ]
 }
 
 maps.hello = "hello"
 
 maps.set(k > "hello" => "new" + v)
 
-maps.replace(k > "hello" => {"new" + k: "new" + v)
+maps.replace(k > "hello" => {"new" + k: "new" + v})
 
 maps.filter(k > "hello")
 

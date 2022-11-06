@@ -5,107 +5,174 @@ import (
 	"errors"
 )
 
-type object []pair
+type object struct {
+	pairs []*pair
+	*callableImp
+}
 
 type pair struct {
 	key []byte
 	val value
 }
 
-func (obj *object) set(key []byte, val value) {
-	for i, p := range *obj {
-		if !bytes.Equal(p.key, key) {
-			continue
-		}
-		(*obj)[i] = pair{key: key, val: val}
-		return
-	}
-	*obj = append(*obj, pair{key: key, val: val})
+func newObject() *object {
+	obj := &object{pairs: []*pair{}, callableImp: newCallable("object")}
+	obj.register("set", setObject)
+	obj.register("replace", replaceObject)
+	obj.register("del", delObject)
+	obj.register("filter", filterObject)
+	return obj
 }
 
-func (obj *object) get(key []byte) value {
-	for _, p := range *obj {
-		if !bytes.Equal(p.key, key) {
+func setObject(val value, nexter *tokenScanner, vars *variables) (value, error) {
+	o := val.value.(*object)
+	return eachPairForSet(o, nexter, vars, func(k []byte, val value, idx int) error {
+		o.pairs[idx].val = val
+		return nil
+	})
+}
+
+func replaceObject(caller value, nexter *tokenScanner, vars *variables) (value, error) {
+	o := caller.value.(*object)
+	return eachPairForSet(o, nexter, vars, func(k []byte, val value, idx int) error {
+		if val.typ != valueObject {
+			return errors.New("replace only support a object as value")
+		}
+		obj := val.value.(*object)
+		o.pairs[idx] = obj.pairs[0]
+		return nil
+	})
+}
+
+func filterObject(caller value, nexter *tokenScanner, vars *variables) (ret value, err error) {
+	o := caller.value.(*object)
+	no := newObject()
+	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val value, idx int) error {
+		no.pairs = append(no.pairs, &pair{key: k, val: val})
+		return nil
+	})
+	ret = value{value: no, typ: valueObject}
+	return
+}
+
+func delObject(caller value, nexter *tokenScanner, vars *variables) (ret value, err error) {
+	o := caller.value.(*object)
+	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val value, idx int) error {
+		o.pairs = append(o.pairs[:idx], o.pairs[idx+1:]...)
+		return nil
+	})
+	return
+}
+
+func eachPairForSet(o *object, nexter *tokenScanner, vars *variables, handle func(k []byte, val value, idx int) error) (ret value, err error) {
+	offset := nexter.offset()
+	nexter.pushEnds(TokenParenthesesClose, TokenReduction)
+	defer nexter.popEnds(2)
+	for i, p := range o.pairs {
+		nexter.setOffset(offset)
+		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
+		vars.set([]byte{'v'}, p.val)
+		expr := newExpr(nexter, vars)
+		if err = expr.execute(); err != nil {
+			return
+		}
+		if nexter.endAt() == TokenParenthesesClose {
+			if err = handle(p.key, expr.value, i); err != nil {
+				return
+			}
+		}
+		var bv bool
+		if bv, err = expr.value.toBool(); err != nil {
+			return
+		}
+		if !bv {
 			continue
 		}
-		return p.val
+		expr = newExpr(nexter, vars)
+		if err = expr.execute(); err != nil {
+			return
+		}
+		if err = handle(p.key, expr.value, i); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func eachPairForFilter(o *object, nexter *tokenScanner, vars *variables, handle func(k []byte, val value, idx int) error) (ret value, err error) {
+	offset := nexter.offset()
+	nexter.pushEnds(TokenParenthesesClose)
+	defer nexter.popEnds(1)
+	for i, p := range o.pairs {
+		nexter.setOffset(offset)
+		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
+		vars.set([]byte{'v'}, p.val)
+		expr := newExpr(nexter, vars)
+		if err = expr.execute(); err != nil {
+			return
+		}
+		var bv bool
+		if bv, err = expr.value.toBool(); err != nil {
+			return
+		}
+		if !bv {
+			continue
+		}
+		handle(p.key, expr.value, i)
+	}
+	return
+}
+
+func (obj object) copy() *object {
+	r := newObject()
+	r.pairs = obj.pairs
+	return r
+}
+
+func (obj *object) get(k []byte) value {
+	for _, p := range obj.pairs {
+		if bytes.Equal(p.key, k) {
+			return p.val
+		}
 	}
 	return value{typ: valueNull}
 }
 
-func (obj *object) del(key []byte) {
-	for i := range *obj {
-		if !bytes.Equal((*obj)[i].key, key) {
-			continue
-		}
-		*obj = append((*obj)[0:i], (*obj)[i+1:]...)
-	}
-}
-
-func (obj *object) setConditionally(condition func(k []byte, val value) bool, val value) {
-	for i, pair := range *obj {
-		if condition(pair.key, pair.val) {
-			pair.val = val
-			(*obj)[i] = pair
+func (obj *object) has(k []byte) bool {
+	for _, p := range obj.pairs {
+		if bytes.Equal(p.key, k) {
+			return true
 		}
 	}
+	return false
 }
 
-func (obj *object) delConditionally(condition func(k []byte, val value) bool) {
-	for i := 0; i < len(*obj); i++ {
-		p := (*obj)[i]
-		if condition(p.key, p.val) {
-			*obj = append((*obj)[0:i], (*obj)[i+1:]...)
-			i--
+func (obj *object) set(k []byte, val value) {
+	for i, p := range obj.pairs {
+		if bytes.Equal(p.key, k) {
+			obj.pairs[i] = &pair{key: k, val: val}
+			return
 		}
 	}
 }
 
-func (obj *object) replace(condition func(k []byte, val value) bool, val func(k []byte, val value) pair) {
-	for i, p := range *obj {
-		if condition(p.key, p.val) {
-			(*obj)[i] = val(p.key, p.val)
+func (obj *object) del(k []byte) {
+	for i, p := range obj.pairs {
+		if bytes.Equal(p.key, k) {
+			obj.pairs = append(obj.pairs[:i], obj.pairs[i+1:]...)
+			return
 		}
 	}
-}
-
-func (obj *object) merge(n *object) {
-	for _, p := range *n {
-		(*obj) = append(*obj, p)
-	}
-}
-
-func (obj *object) keys(condition func(k []byte, val value) bool) [][]byte {
-	ret := [][]byte{}
-	for _, p := range *obj {
-		if condition(p.key, p.val) {
-			ret = append(ret, p.key)
-		}
-	}
-	return ret
-}
-
-func (obj *object) values(condition func(k []byte, val value) bool) []value {
-	ret := []value{}
-	for _, p := range *obj {
-		if condition(p.key, p.val) {
-			ret = append(ret, p.val)
-		}
-	}
-	return ret
 }
 
 type objectExecutor struct {
-	getter    lexer
-	variables *variables
-	value     object
+	scanner *tokenScanner
+	vars    *variables
+	value   *object
 }
 
-func newObjectExecutor(getter lexer, vs *variables) *objectExecutor {
-	return &objectExecutor{
-		getter:    getter,
-		variables: vs,
-	}
+func newObjectExecutor(scanner *tokenScanner, vars *variables) *objectExecutor {
+	return &objectExecutor{scanner: scanner, vars: vars}
 }
 
 func (e *objectExecutor) execute() (err error) {
@@ -113,24 +180,36 @@ func (e *objectExecutor) execute() (err error) {
 	return
 }
 
-func (e *objectExecutor) pairs() (val object, err error) {
+func (e *objectExecutor) pairs() (val *object, err error) {
+	val = newObject()
+	e.vars.pushMe(value{typ: valueObject, value: val})
+	defer e.vars.popMe()
 	for {
-		expr := newExpr(e.getter, [][]byte{{':'}}, e.variables)
-		if err = expr.execute(); err != nil {
-			return
-		}
-		if expr.value.typ != valueString {
-			err = errors.New("object key must be string")
-			return
-		}
+		expr := newExpr(e.scanner, e.vars)
+		func() {
+			e.scanner.pushEnds(TokenColon)
+			defer e.scanner.popEnds(1)
+			if err = expr.execute(); err != nil {
+				return
+			}
+			if expr.value.typ != valueString {
+				err = errors.New("object key must be string")
+				return
+			}
+		}()
 		key := expr.value.value.([]byte)
-		expr = newExpr(e.getter, [][]byte{{','}, {'}'}}, e.variables)
-		if err = expr.execute(); err != nil {
-			return
-		}
+		func() {
+			e.scanner.pushEnds(TokenComma, TokenParenthesesClose)
+			defer e.scanner.popEnds(2)
+			expr = newExpr(e.scanner, e.vars)
+			if err = expr.execute(); err != nil {
+				return
+			}
+		}()
 		val.set(key, expr.value)
-		if bytes.Equal(expr.endAt(), []byte{'}'}) {
+		if e.scanner.endAt() == TokenParenthesesClose {
 			return
 		}
 	}
+	return
 }

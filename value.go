@@ -16,6 +16,20 @@ const (
 	valueFloat
 	valueInt
 	valueBool
+	valueIdentifier
+)
+
+var (
+	valueNames = map[valueType]string{
+		valueNull:       "null",
+		valueObject:     "object",
+		valueArray:      "array",
+		valueString:     "string",
+		valueFloat:      "float",
+		valueInt:        "int",
+		valueBool:       "bool",
+		valueIdentifier: "idenfitier",
+	}
 )
 
 const (
@@ -23,9 +37,16 @@ const (
 	logicOr
 )
 
+type identifier struct {
+	name      []byte
+	variables *variables
+}
+
 type value struct {
-	value interface{}
-	typ   valueType
+	value   interface{}
+	typ     valueType
+	p       *value
+	dotPath []byte
 }
 
 type p struct {
@@ -33,19 +54,62 @@ type p struct {
 	idx int
 }
 
-func (val value) each(handle func(p p, val value)) {
-	switch val.typ {
-	case valueObject:
-		for _, v := range val.value.(object) {
-			handle(p{key: v.key}, v.val)
-		}
-	case valueInt:
-		for i, v := range val.value.(array) {
-			handle(p{idx: i}, v)
-		}
-	default:
-		handle(p{}, val)
+func (id identifier) value() value {
+	return id.variables.lookup(id.name)
+}
+
+func (left value) call(nexter *tokenScanner, vars *variables) (val value, err error) {
+	call, ok := left.value.(callable)
+	if !ok {
+		err = fmt.Errorf("%s can't support call function", valueNames[left.typ])
+		return
 	}
+	dotPath := left.dotPath
+	idx := bytes.LastIndex(left.dotPath, []byte{'.'})
+	if idx > -1 {
+		left.dotPath = dotPath[:idx]
+	}
+	val, err = left.realValue()
+	if err != nil {
+		return
+	}
+	return call.call(string(dotPath[idx+1:]), val, nexter, vars)
+}
+
+func (left value) merge(right value) (val value, err error) {
+	if right.typ != valueIdentifier {
+		err = errors.New("only identifier as right value can merge")
+		return
+	}
+	val = left
+	if len(val.dotPath) > 0 {
+		val.dotPath = append(val.dotPath, '.')
+	}
+	val.dotPath = append(val.dotPath, right.value.(*identifier).name...)
+	return
+}
+
+func (left value) assign(right value) (val value, err error) {
+	if left.typ != valueIdentifier {
+		err = errors.New("only identifier can assign to")
+	}
+	return
+}
+
+func (left value) realValue() (val value, err error) {
+	if left.typ == valueIdentifier {
+		left = left.value.(*identifier).value()
+	}
+	if len(left.dotPath) == 0 {
+		val = left
+		return
+	}
+	lookuper, ok := left.value.(lookuper)
+	if !ok {
+		err = fmt.Errorf("%s can't support dot path search", valueNames[left.typ])
+	}
+	val = lookuper.lookup(left.dotPath)
+	return
 }
 
 func (left value) add(right value) (value, error) {
@@ -65,6 +129,13 @@ func (left value) devide(right value) (value, error) {
 }
 
 func (left value) compare(right value) (int, error) {
+	var err error
+	if left, err = left.realValue(); err != nil {
+		return 0, err
+	}
+	if right, err = right.realValue(); err != nil {
+		return 0, err
+	}
 	if left.typ != right.typ {
 		return 0, errors.New("type not match")
 	}
@@ -98,14 +169,14 @@ func (left value) compare(right value) (int, error) {
 	case valueString:
 		return bytes.Compare(left.value.([]byte), right.value.([]byte)), nil
 	case valueObject:
-		lr := left.value.(object)
-		rr := right.value.(object)
-		if len(lr) > len(rr) {
+		lr := left.value.(*object)
+		rr := right.value.(*object)
+		if len(lr.pairs) > len(rr.pairs) {
 			return 1, nil
-		} else if len(lr) < len(rr) {
+		} else if len(lr.pairs) < len(rr.pairs) {
 			return -1, nil
 		}
-		for _, p := range lr {
+		for _, p := range lr.pairs {
 			c, err := p.val.compare(rr.get(p.key))
 			if err != nil {
 				return 0, err
@@ -115,15 +186,15 @@ func (left value) compare(right value) (int, error) {
 		}
 		return 0, nil
 	case valueArray:
-		lr := left.value.(array)
-		rr := right.value.(array)
-		if len(lr) > len(rr) {
+		lr := left.value.(*array)
+		rr := right.value.(*array)
+		if len(lr.items) > len(rr.items) {
 			return 1, nil
-		} else if len(lr) < len(rr) {
+		} else if len(lr.items) < len(rr.items) {
 			return -1, nil
 		}
-		for i, p := range lr {
-			c, err := p.compare(rr[i])
+		for i, p := range lr.items {
+			c, err := p.compare(rr.items[i])
 			if err != nil {
 				return 0, err
 			}
@@ -145,6 +216,12 @@ func (left value) equal(right value) bool {
 }
 
 func (left value) arithmatic(right value, operator byte) (val value, err error) {
+	if left, err = left.realValue(); err != nil {
+		return
+	}
+	if right, err = right.realValue(); err != nil {
+		return
+	}
 	switch left.typ {
 	case valueNull:
 		return right, nil
@@ -197,19 +274,19 @@ func (left value) arithmatic(right value, operator byte) (val value, err error) 
 	case valueArray:
 		switch operator {
 		case '+':
-			arr := left.value.(array)
+			arr := left.value.(*array)
 			if right.typ == valueArray {
-				(&arr).append(right.value.(array)...)
+				arr.append(right.value.(*array).items...)
 			} else {
-				(&arr).append(right)
+				arr.append(right)
 			}
 			val = value{typ: valueArray, value: arr}
 		case '-':
-			arr := left.value.(array)
+			arr := left.value.(*array)
 			if right.typ == valueArray {
-				(&arr).del(right.value.(array)...)
+				arr.del(right.value.(*array).items...)
 			} else {
-				(&arr).del(right)
+				arr.del(right)
 			}
 			val = value{typ: valueArray, value: arr}
 		default:
@@ -221,18 +298,18 @@ func (left value) arithmatic(right value, operator byte) (val value, err error) 
 			if right.typ != valueObject {
 				err = fmt.Errorf("unsupported arithmatic for object as right value")
 			}
-			obj := left.value.(object)
-			for _, p := range right.value.(object) {
-				(&obj).set(p.key, p.val)
+			obj := left.value.(*object)
+			for _, p := range right.value.(*object).pairs {
+				obj.set(p.key, p.val)
 			}
 			val = value{typ: valueObject, value: obj}
 		case '-':
 			if right.typ != valueObject {
 				err = fmt.Errorf("unsupported arithmatic for object as right value")
 			}
-			obj := left.value.(object)
-			for _, p := range right.value.(object) {
-				(&obj).del(p.key)
+			obj := left.value.(*object)
+			for _, p := range right.value.(*object).pairs {
+				obj.del(p.key)
 			}
 			val = value{typ: valueObject, value: obj}
 		}
@@ -251,32 +328,39 @@ func (left value) or(right value) (val value, err error) {
 }
 
 func (left value) logic(right value, operator int) (val value, err error) {
-	leftVal := left.toBool()
-	rightVal := right.toBool()
+	var lv, rv bool
+	if lv, err = left.toBool(); err != nil {
+		return
+	}
+	if rv, err = right.toBool(); err != nil {
+		return
+	}
 	switch operator {
 	case logicOr:
-		val = value{typ: valueBool, value: leftVal || rightVal}
+		val = value{typ: valueBool, value: lv || rv}
 	case logicAnd:
-		val = value{typ: valueBool, value: leftVal && rightVal}
+		val = value{typ: valueBool, value: lv && rv}
 	}
 	return
 }
 
-func (val value) toBool() bool {
+func (val value) toBool() (ret bool, err error) {
+	if val, err = val.realValue(); err != nil {
+		return
+	}
 	switch val.typ {
 	case valueInt:
-		return val.value.(int64) != 0
+		ret = val.value.(int64) != 0
 	case valueFloat:
-		return val.value.(float64) != 0
+		ret = int64(val.value.(float64)) != 0
 	case valueString:
-		return len(val.value.([]byte)) > 0
+		ret = len(val.value.([]byte)) > 0
 	case valueArray:
-		return len(val.value.(array)) > 0
+		ret = len(val.value.(*array).items) > 0
 	case valueObject:
-		return len(val.value.(object)) > 0
+		ret = len(val.value.(*object).pairs) > 0
 	case valueBool:
-		return val.value.(bool)
-	default:
-		return false
+		ret = val.value.(bool)
 	}
+	return
 }

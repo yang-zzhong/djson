@@ -39,14 +39,27 @@ func (vs variables) lookup(k []byte) value {
 }
 
 func (val value) lookup(k []byte) value {
-	lookuper, ok := val.value.(lookuper)
-	if ok {
-		return lookuper.lookup(k)
+	lookup := func() value {
+		lookuper, ok := val.value.(lookuper)
+		if ok {
+			return lookuper.lookup(k)
+		}
+		return value{typ: valueNull}
 	}
-	return value{typ: valueNull}
+	i, r := splitKeyAndRest(k)
+	if bytes.Equal(i, []byte{'_', 'p'}) {
+		if val.typ == valueObject && !val.value.(*object).has(i) {
+			return lookup()
+		}
+		if val.p == nil {
+			return value{typ: valueNull}
+		}
+		return val.p.lookup(r)
+	}
+	return lookup()
 }
 
-func (obj object) lookup(k []byte) value {
+func (obj *object) lookup(k []byte) value {
 	i, r := splitKeyAndRest(k)
 	if !bytes.Equal(i, []byte{'*'}) {
 		val := obj.get(i)
@@ -55,43 +68,43 @@ func (obj object) lookup(k []byte) value {
 		}
 		return val.lookup(r)
 	}
-	var arr array
-	for _, p := range obj {
+	arr := newArray()
+	for _, p := range obj.pairs {
 		if len(r) == 0 {
-			arr = append(arr, p.val)
+			arr.items = append(arr.items, p.val)
 			continue
 		}
 		item := p.val.lookup(r)
 		if item.typ != valueNull {
-			arr = append(arr, item)
+			arr.items = append(arr.items, item)
 		}
 	}
 	return value{typ: valueArray, value: arr}
 }
 
-func (arr array) lookup(k []byte) value {
+func (arr *array) lookup(k []byte) value {
 	i, r := splitKeyAndRest(k)
 	if !bytes.Equal(i, []byte{'*'}) {
 		idx, err := strconv.Atoi(string(i))
 		if err != nil {
 			return value{typ: valueNull}
 		}
-		if idx > len(arr) {
+		if idx > len(arr.items) {
 			return value{typ: valueNull}
 		}
 		if len(r) == 0 {
-			return arr[idx]
+			return arr.items[idx]
 		}
-		return arr[idx].lookup(r)
+		return arr.items[idx].lookup(r)
 	}
 	if len(r) == 0 {
 		return value{typ: valueArray, value: arr}
 	}
-	var ret array
-	for _, item := range arr {
+	ret := newArray()
+	for _, item := range arr.items {
 		v := item.lookup(r)
 		if v.typ != valueNull {
-			ret = append(ret, v)
+			ret.items = append(ret.items, v)
 		}
 	}
 	return value{typ: valueArray, value: ret}

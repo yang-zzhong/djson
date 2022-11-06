@@ -11,6 +11,7 @@ const (
 	TokenParenthesesClose                   //  )
 	TokenAssignation                        // =
 	TokenEqual                              // ==
+	TokenNotEqual                           // !=
 	TokenGreateThan                         // >
 	TokenLessThan                           // <
 	TokenGreateThanEqual                    // >=
@@ -25,6 +26,8 @@ const (
 	TokenComma                              // ,
 	TokenDot                                // .
 	TokenEOF                                // eof
+	TokenExclamation                        // !
+	TokenComment                            // comment
 	TokenNull                               // null
 	TokenTrue                               // true
 	TokenFalse                              // false

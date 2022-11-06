@@ -111,6 +111,8 @@ data = {
     "float": 1.23,
     "bool": true,
 }.set(k == "string" => v + "_new")
+# hello world
+1 != 2 && true || false
 `
 	res := []struct {
 		typ      TokenType
@@ -153,6 +155,16 @@ data = {
 		{typ: TokenAddition, row: 6, col: 25},
 		{typ: TokenString, raw: []byte("\"_new\""), row: 6, col: 27},
 		{typ: TokenParenthesesClose, row: 6, col: 33},
+
+		{typ: TokenComment, row: 7, col: 0},
+
+		{typ: TokenNumber, row: 8, col: 0},
+		{typ: TokenNotEqual, row: 8, col: 2},
+		{typ: TokenNumber, row: 8, col: 5},
+		{typ: TokenAnd, row: 8, col: 7},
+		{typ: TokenTrue, row: 8, col: 10},
+		{typ: TokenOr, row: 8, col: 15},
+		{typ: TokenFalse, row: 8, col: 18},
 	}
 	g := NewLexer(bytes.NewBuffer([]byte(data)), 128)
 	g.state = stateStart

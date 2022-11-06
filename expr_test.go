@@ -2,32 +2,16 @@ package djson
 
 import "testing"
 
-type getter struct {
-	offset int
-	tokens []*Token
-}
-
-func (g *getter) NextToken(token *Token) error {
-	if len(g.tokens) == g.offset {
-		token.Type = TokenEOF
-		return nil
-	}
-	token.Raw = g.tokens[g.offset].Raw
-	token.Type = g.tokens[g.offset].Type
-	g.offset++
-	return nil
-}
-
 func TestExpr(t *testing.T) {
 	// 5 + 2 - 1
-	g := &getter{tokens: []*Token{
+	g := newLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
 		{Type: TokenMinus},
 		{Type: TokenNumber, Raw: []byte{'1'}},
-	}}
-	expr := newExpr(g, nil, nil)
+	})
+	expr := newExpr(newTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -35,14 +19,14 @@ func TestExpr(t *testing.T) {
 		t.Fatal("5 + 2 - 1 failed")
 	}
 	// 5 + 2 * 3
-	g = &getter{tokens: []*Token{
+	g = newLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
-	}}
-	expr = newExpr(g, nil, nil)
+	})
+	expr = newExpr(newTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +34,7 @@ func TestExpr(t *testing.T) {
 		t.Fatal("5 + 2 * 3 failed")
 	}
 	// (5 + 2) * 3
-	g = &getter{tokens: []*Token{
+	g = newLexMock([]*Token{
 		{Type: TokenParenthesesOpen},
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
@@ -58,8 +42,8 @@ func TestExpr(t *testing.T) {
 		{Type: TokenParenthesesClose},
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
-	}}
-	expr = newExpr(g, nil, nil)
+	})
+	expr = newExpr(newTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -67,12 +51,12 @@ func TestExpr(t *testing.T) {
 		t.Fatal("(5 + 2) * 3 failed")
 	}
 	// "hello" + "world"
-	g = &getter{tokens: []*Token{
+	g = newLexMock([]*Token{
 		{Type: TokenString, Raw: []byte("\"hello\"")},
 		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("\"world\"")},
-	}}
-	expr = newExpr(g, nil, nil)
+	})
+	expr = newExpr(newTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
