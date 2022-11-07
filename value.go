@@ -39,14 +39,14 @@ const (
 
 type identifier struct {
 	name      []byte
+	p         *value
 	variables *variables
 }
 
 type value struct {
-	value   interface{}
-	typ     valueType
-	p       *value
-	dotPath []byte
+	value interface{}
+	typ   valueType
+	p     *value
 }
 
 type p struct {
@@ -55,38 +55,30 @@ type p struct {
 }
 
 func (id identifier) value() value {
-	return id.variables.lookup(id.name)
+	dots := []byte{}
+	tmp := &id
+	for tmp.p != nil {
+		if len(dots) == 0 {
+			dots = tmp.name
+		} else {
+			n := append(tmp.name, '.')
+			dots = append(n, dots...)
+		}
+		if tmp.p.typ == valueIdentifier {
+			tmp = tmp.p.value.(*identifier)
+		}
+	}
+	return id.variables.lookup(dots)
 }
 
-func (left value) call(nexter *tokenScanner, vars *variables) (val value, err error) {
-	call, ok := left.value.(callable)
+func (id identifier) call(scanner *tokenScanner, vars *variables) (val value, err error) {
+	name := id.name
+	val = id.p.realValue()
+	call, ok := val.value.(callable)
 	if !ok {
-		err = fmt.Errorf("%s can't support call function", valueNames[left.typ])
-		return
+		err = fmt.Errorf("%s can't support call function", valueNames[val.typ])
 	}
-	dotPath := left.dotPath
-	idx := bytes.LastIndex(left.dotPath, []byte{'.'})
-	if idx > -1 {
-		left.dotPath = dotPath[:idx]
-	}
-	val, err = left.realValue()
-	if err != nil {
-		return
-	}
-	return call.call(string(dotPath[idx+1:]), val, nexter, vars)
-}
-
-func (left value) merge(right value) (val value, err error) {
-	if right.typ != valueIdentifier {
-		err = errors.New("only identifier as right value can merge")
-		return
-	}
-	val = left
-	if len(val.dotPath) > 0 {
-		val.dotPath = append(val.dotPath, '.')
-	}
-	val.dotPath = append(val.dotPath, right.value.(*identifier).name...)
-	return
+	return call.call(string(name), val, scanner, vars)
 }
 
 func (left value) assign(right value) (val value, err error) {
@@ -96,19 +88,11 @@ func (left value) assign(right value) (val value, err error) {
 	return
 }
 
-func (left value) realValue() (val value, err error) {
+func (left value) realValue() (val value) {
 	if left.typ == valueIdentifier {
-		left = left.value.(*identifier).value()
+		val = left.value.(*identifier).value()
 	}
-	if len(left.dotPath) == 0 {
-		val = left
-		return
-	}
-	lookuper, ok := left.value.(lookuper)
-	if !ok {
-		err = fmt.Errorf("%s can't support dot path search", valueNames[left.typ])
-	}
-	val = lookuper.lookup(left.dotPath)
+	val = left
 	return
 }
 
@@ -129,13 +113,8 @@ func (left value) devide(right value) (value, error) {
 }
 
 func (left value) compare(right value) (int, error) {
-	var err error
-	if left, err = left.realValue(); err != nil {
-		return 0, err
-	}
-	if right, err = right.realValue(); err != nil {
-		return 0, err
-	}
+	left = left.realValue()
+	right = right.realValue()
 	if left.typ != right.typ {
 		return 0, errors.New("type not match")
 	}
@@ -216,12 +195,8 @@ func (left value) equal(right value) bool {
 }
 
 func (left value) arithmatic(right value, operator byte) (val value, err error) {
-	if left, err = left.realValue(); err != nil {
-		return
-	}
-	if right, err = right.realValue(); err != nil {
-		return
-	}
+	left = left.realValue()
+	right = right.realValue()
 	switch left.typ {
 	case valueNull:
 		return right, nil
@@ -345,9 +320,7 @@ func (left value) logic(right value, operator int) (val value, err error) {
 }
 
 func (val value) toBool() (ret bool, err error) {
-	if val, err = val.realValue(); err != nil {
-		return
-	}
+	val = val.realValue()
 	switch val.typ {
 	case valueInt:
 		ret = val.value.(int64) != 0

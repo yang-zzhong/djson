@@ -2,6 +2,7 @@ package djson
 
 import (
 	"bytes"
+	"errors"
 	"strconv"
 )
 
@@ -42,11 +43,11 @@ func (e *expr) execute() (err error) {
 func (e *expr) call() (value, error) {
 	undered := false
 	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenParenthesesOpen {
+		if val.typ == valueIdentifier && e.scanner.token.Type == TokenParenthesesOpen {
 			e.scanner.pushEnds(TokenParenthesesClose)
 			defer e.scanner.popEnds(1)
 			e.useToken(func() {
-				ret, err = val.call(e.scanner, e.variables)
+				ret, err = val.value.(*identifier).call(e.scanner, e.variables)
 			})
 			return
 		}
@@ -71,7 +72,12 @@ func (e *expr) dot() (value, error) {
 				if err != nil {
 					return
 				}
-				ret, err = val.merge(right)
+				if right.typ != valueIdentifier {
+					err = errors.New("dot must follow an identifier")
+					return
+				}
+				right.p = &val
+				ret = right
 			})
 			return
 		}
