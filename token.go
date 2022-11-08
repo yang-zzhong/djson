@@ -34,6 +34,7 @@ const (
 	TokenReduction                          // =>
 	TokenNumber                             // number
 	TokenString                             // string
+	TokenRange                              // ... // [1 ... 10].map({"key": "" + v + "_x"})
 	TokenIdentifier                         // identifier
 )
 

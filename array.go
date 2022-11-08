@@ -11,6 +11,7 @@ func newArray(items ...value) *array {
 		items:       items,
 	}
 	arr.register("set", setArray)
+	arr.register("map", setArray)
 	arr.register("del", delArray)
 	arr.register("filter", filterArray)
 	return arr

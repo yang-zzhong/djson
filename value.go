@@ -55,20 +55,18 @@ type p struct {
 }
 
 func (id identifier) value() value {
-	dots := []byte{}
+	dots := id.name
 	tmp := &id
-	for tmp.p != nil {
-		if len(dots) == 0 {
-			dots = tmp.name
-		} else {
-			n := append(tmp.name, '.')
-			dots = append(n, dots...)
-		}
-		if tmp.p.typ == valueIdentifier {
-			tmp = tmp.p.value.(*identifier)
-		}
+	for tmp.p != nil && tmp.p.typ == valueIdentifier {
+		tmp = tmp.p.value.(*identifier)
+		n := append(tmp.name, '.')
+		dots = append(n, dots...)
 	}
-	return id.variables.lookup(dots)
+	val := id.variables.lookup(dots)
+	if val.typ == valueIdentifier {
+		return val.value.(*identifier).value()
+	}
+	return val
 }
 
 func (id identifier) call(scanner *tokenScanner, vars *variables) (val value, err error) {
@@ -91,6 +89,7 @@ func (left value) assign(right value) (val value, err error) {
 func (left value) realValue() (val value) {
 	if left.typ == valueIdentifier {
 		val = left.value.(*identifier).value()
+		return
 	}
 	val = left
 	return
@@ -113,21 +112,21 @@ func (left value) devide(right value) (value, error) {
 }
 
 func (left value) compare(right value) (int, error) {
-	left = left.realValue()
-	right = right.realValue()
-	if left.typ != right.typ {
+	rlv := left.realValue()
+	rrv := right.realValue()
+	if rlv.typ != rrv.typ {
 		return 0, errors.New("type not match")
 	}
-	switch left.typ {
+	switch rlv.typ {
 	case valueNull:
-		if right.typ == valueNull {
+		if rrv.typ == valueNull {
 			return 0, nil
-		} else if right.typ != valueNull {
+		} else if rrv.typ != valueNull {
 			return -1, nil
 		}
 	case valueInt:
-		lr := left.value.(int64)
-		rr := right.value.(int64)
+		lr := rlv.value.(int64)
+		rr := rrv.value.(int64)
 		if lr > rr {
 			return 1, nil
 		} else if lr == rr {
@@ -136,8 +135,8 @@ func (left value) compare(right value) (int, error) {
 			return -1, nil
 		}
 	case valueFloat:
-		lr := left.value.(float64)
-		rr := right.value.(float64)
+		lr := rlv.value.(float64)
+		rr := rrv.value.(float64)
 		if lr > rr {
 			return 1, nil
 		} else if lr == rr {
@@ -146,10 +145,10 @@ func (left value) compare(right value) (int, error) {
 			return -1, nil
 		}
 	case valueString:
-		return bytes.Compare(left.value.([]byte), right.value.([]byte)), nil
+		return bytes.Compare(rlv.value.([]byte), rrv.value.([]byte)), nil
 	case valueObject:
-		lr := left.value.(*object)
-		rr := right.value.(*object)
+		lr := rlv.value.(*object)
+		rr := rrv.value.(*object)
 		if len(lr.pairs) > len(rr.pairs) {
 			return 1, nil
 		} else if len(lr.pairs) < len(rr.pairs) {
@@ -165,8 +164,8 @@ func (left value) compare(right value) (int, error) {
 		}
 		return 0, nil
 	case valueArray:
-		lr := left.value.(*array)
-		rr := right.value.(*array)
+		lr := rlv.value.(*array)
+		rr := rrv.value.(*array)
 		if len(lr.items) > len(rr.items) {
 			return 1, nil
 		} else if len(lr.items) < len(rr.items) {

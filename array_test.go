@@ -25,3 +25,25 @@ func TestArray_set(t *testing.T) {
 		t.Fatal("returned error")
 	}
 }
+
+func TestArray_del(t *testing.T) {
+	// arr.del(k == 0)
+	arr := newArray(
+		value{typ: valueInt, value: int64(1)},
+		value{typ: valueInt, value: int64(2)},
+		value{typ: valueInt, value: int64(3)},
+	)
+	scanner := newTokenScanner(newLexMock([]*Token{
+		{Type: TokenIdentifier, Raw: []byte{'i'}},
+		{Type: TokenEqual},
+		{Type: TokenNumber, Raw: []byte{'0'}},
+		{Type: TokenParenthesesClose},
+	}))
+	_, err := delArray(value{typ: valueArray, value: arr}, scanner, newVariables())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(arr.items) != 2 {
+		t.Fatal("del array error")
+	}
+}

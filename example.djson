@@ -12,6 +12,9 @@ maps = {
   ]
 }
 
+a = a.value == "shot" => "shot_11"
+a = a.value == "shot_11" => "hello"
+
 maps.hello = "hello"
 
 maps.set(k > "hello" => "new" + v)
