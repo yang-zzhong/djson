@@ -52,9 +52,9 @@ func TestSimpleStmt(t *testing.T) {
 	}
 	// "hello" + "world"
 	g = newLexMock([]*Token{
-		{Type: TokenString, Raw: []byte("\"hello\"")},
+		{Type: TokenString, Raw: []byte("hello")},
 		{Type: TokenAddition},
-		{Type: TokenString, Raw: []byte("\"world\"")},
+		{Type: TokenString, Raw: []byte("world")},
 	})
 	expr = newStmt(newTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {

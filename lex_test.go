@@ -49,13 +49,13 @@ func TestLexer_string(t *testing.T) {
 		typ       TokenType
 		shoulderr bool
 	}{
-		{data: "\"1\"", val: []byte{'"', '1', '"'}, typ: TokenString},
-		{data: "\"124\"", val: []byte("\"124\""), typ: TokenString},
+		{data: "\"1\"", val: []byte{'1'}, typ: TokenString},
+		{data: "\"124\"", val: []byte("124"), typ: TokenString},
 		{data: "\"hello world", shoulderr: true, typ: TokenString},
-		{data: "\"hello world\nhello\"", val: []byte("\"hello world\nhello\""), typ: TokenString},
-		{data: "\"hello \\\"world\nhello\"", val: []byte("\"hello \\\"world\nhello\""), typ: TokenString},
+		{data: "\"hello world\nhello\"", val: []byte("hello world\nhello"), typ: TokenString},
+		{data: "\"hello \\\"world\nhello\"", val: []byte("hello \\\"world\nhello"), typ: TokenString},
 	}
-	for _, item := range data {
+	for i, item := range data {
 		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		g.state = stateStart
 		var token Token
@@ -66,7 +66,7 @@ func TestLexer_string(t *testing.T) {
 			t.Fatal(err)
 		}
 		if token.Type != item.typ || !bytes.Equal(item.val, token.Raw) {
-			t.Fatal("error occurred")
+			t.Fatalf("error occurred at %d", i)
 		}
 		t.Logf("token: %#v\n", token)
 	}
@@ -123,22 +123,22 @@ data = {
 		{typ: TokenAssignation, row: 1, col: 5},
 		{typ: TokenBraceOpen, row: 1, col: 7},
 
-		{typ: TokenString, raw: []byte("\"string\""), row: 2, col: 4},
+		{typ: TokenString, raw: []byte("string"), row: 2, col: 4},
 		{typ: TokenColon, row: 2, col: 12},
-		{typ: TokenString, raw: []byte("\"123\""), row: 2, col: 14},
+		{typ: TokenString, raw: []byte("123"), row: 2, col: 14},
 		{typ: TokenComma, row: 2, col: 19},
 
-		{typ: TokenString, raw: []byte("\"int\""), row: 3, col: 4},
+		{typ: TokenString, raw: []byte("int"), row: 3, col: 4},
 		{typ: TokenColon, row: 3, col: 9},
 		{typ: TokenNumber, raw: []byte("123"), row: 3, col: 11},
 		{typ: TokenComma, row: 3, col: 14},
 
-		{typ: TokenString, raw: []byte("\"float\""), row: 4, col: 4},
+		{typ: TokenString, raw: []byte("float"), row: 4, col: 4},
 		{typ: TokenColon, row: 4, col: 11},
 		{typ: TokenNumber, raw: []byte("1.23"), row: 4, col: 13},
 		{typ: TokenComma, row: 4, col: 17},
 
-		{typ: TokenString, raw: []byte("\"bool\""), row: 5, col: 4},
+		{typ: TokenString, raw: []byte("bool"), row: 5, col: 4},
 		{typ: TokenColon, row: 5, col: 10},
 		{typ: TokenTrue, row: 5, col: 12},
 		{typ: TokenComma, row: 5, col: 16},
@@ -149,11 +149,11 @@ data = {
 		{typ: TokenParenthesesOpen, row: 6, col: 5},
 		{typ: TokenIdentifier, raw: []byte("k"), row: 6, col: 6},
 		{typ: TokenEqual, row: 6, col: 8},
-		{typ: TokenString, raw: []byte("\"string\""), row: 6, col: 11},
+		{typ: TokenString, raw: []byte("string"), row: 6, col: 11},
 		{typ: TokenReduction, row: 6, col: 20},
 		{typ: TokenIdentifier, raw: []byte("v"), row: 6, col: 23},
 		{typ: TokenAddition, row: 6, col: 25},
-		{typ: TokenString, raw: []byte("\"_new\""), row: 6, col: 27},
+		{typ: TokenString, raw: []byte("_new"), row: 6, col: 27},
 		{typ: TokenParenthesesClose, row: 6, col: 33},
 
 		{typ: TokenComment, row: 7, col: 0},

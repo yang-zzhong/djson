@@ -504,13 +504,20 @@ func (g *lexer_) clearStash(next byte) {
 }
 
 func (g *lexer_) fillToken(token *Token, next byte) {
+	defer func() {
+		token.Row = g.stashStartRow
+		token.Col = g.stashStartCol
+		g.clearStash(next)
+	}()
 	if !exclodeRawToken(token.Type) {
+		if token.Type == TokenString {
+			token.Raw = make([]byte, g.stashOffset-2)
+			copy(token.Raw, g.stash[1:g.stashOffset-1])
+			return
+		}
 		token.Raw = make([]byte, g.stashOffset)
 		copy(token.Raw, g.stash[:g.stashOffset])
 	}
-	token.Row = g.stashStartRow
-	token.Col = g.stashStartCol
-	g.clearStash(next)
 }
 
 func (g *lexer_) isWhitespace(b byte) bool {
