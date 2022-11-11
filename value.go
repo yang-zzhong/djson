@@ -83,6 +83,8 @@ func (left value) assign(right value) (val value, err error) {
 	if left.typ != valueIdentifier {
 		err = errors.New("only identifier can assign to")
 	}
+	id := left.value.(*identifier)
+	id.variables.set(id.name, right)
 	return
 }
 

@@ -16,6 +16,7 @@ const (
 	stateString
 	stateNumber
 	stateVoid
+	stateSemicolon
 	stateEqStarted
 	stateEq
 	stateReduction
@@ -358,6 +359,8 @@ func (g *lexer_) matchSimple(b byte, token *Token) (matched bool, catched bool) 
 		return true, g.shiftState(b, stateMultiple, token)
 	case '/':
 		return true, g.shiftState(b, stateDevide, token)
+	case ';':
+		return true, g.shiftState(b, stateSemicolon, token)
 	case '<':
 		return true, g.shiftState(b, stateLt, token)
 	case '>':
@@ -459,6 +462,8 @@ func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 				return TokenNull
 			case stateNeq:
 				return TokenNotEqual
+			case stateSemicolon:
+				return TokenSemicolon
 			}
 			return TokenType(100000)
 		}()

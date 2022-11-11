@@ -18,6 +18,7 @@ const (
 	TokenLessThanEqual                      // <=
 	TokenOr                                 // ||
 	TokenAnd                                // &&
+	TokenSemicolon                          // ;
 	TokenAddition                           // +
 	TokenMinus                              // -
 	TokenMultiplication                     // *

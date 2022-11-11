@@ -54,7 +54,7 @@ func eachItemForSet(o *array, scanner *tokenScanner, vars *variables, handle fun
 		func() {
 			scanner.pushEnds(TokenParenthesesClose, TokenReduction)
 			defer scanner.popEnds(2)
-			expr := newExpr(scanner, vars)
+			expr := newStmt(scanner, vars)
 			if err = expr.execute(); err != nil {
 				return
 			}
@@ -76,7 +76,7 @@ func eachItemForSet(o *array, scanner *tokenScanner, vars *variables, handle fun
 		func() {
 			scanner.pushEnds(TokenParenthesesClose)
 			defer scanner.popEnds(1)
-			expr := newExpr(scanner, vars)
+			expr := newStmt(scanner, vars)
 			if err = expr.execute(); err != nil {
 				return
 			}
@@ -99,7 +99,7 @@ func eachItemForFilter(o *array, scanner *tokenScanner, vars *variables, handle 
 		scanner.setOffset(offset)
 		vars.set([]byte{'i'}, value{typ: valueInt, value: int64(i)})
 		vars.set([]byte{'v'}, p)
-		expr := newExpr(scanner, vars)
+		expr := newStmt(scanner, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
@@ -172,7 +172,7 @@ func (e *arrayExecutor) items() (val array, err error) {
 	e.vars.pushMe(value{typ: valueArray, value: &val})
 	defer e.vars.popMe()
 	for {
-		expr := newExpr(e.scanner, e.vars)
+		expr := newStmt(e.scanner, e.vars)
 		if err = expr.execute(); err != nil {
 			return
 		}

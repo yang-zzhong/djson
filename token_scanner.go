@@ -56,10 +56,13 @@ func (t *tokenScanner) scan() (end bool, err error) {
 		t.tokens = append(t.tokens, token)
 	}
 	t.token = t.tokens[t.readOffset]
+	if t.token.Type == TokenEOF {
+		end = true
+		return
+	}
 	for _, e := range t.endsWhen {
 		if e == t.token.Type {
 			end = true
-			t.forward()
 			return
 		}
 	}

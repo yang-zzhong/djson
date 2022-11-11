@@ -72,7 +72,7 @@ func eachPairForSet(o *object, nexter *tokenScanner, vars *variables, handle fun
 		nexter.setOffset(offset)
 		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
 		vars.set([]byte{'v'}, p.val)
-		expr := newExpr(nexter, vars)
+		expr := newStmt(nexter, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
@@ -88,7 +88,7 @@ func eachPairForSet(o *object, nexter *tokenScanner, vars *variables, handle fun
 		if !bv {
 			continue
 		}
-		expr = newExpr(nexter, vars)
+		expr = newStmt(nexter, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
@@ -107,7 +107,7 @@ func eachPairForFilter(o *object, nexter *tokenScanner, vars *variables, handle 
 		nexter.setOffset(offset)
 		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
 		vars.set([]byte{'v'}, p.val)
-		expr := newExpr(nexter, vars)
+		expr := newStmt(nexter, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
@@ -154,6 +154,7 @@ func (obj *object) set(k []byte, val value) {
 			return
 		}
 	}
+	obj.pairs = append(obj.pairs, &pair{key: k, val: val})
 }
 
 func (obj *object) del(k []byte) {
@@ -185,7 +186,7 @@ func (e *objectExecutor) pairs() (val *object, err error) {
 	e.vars.pushMe(value{typ: valueObject, value: val})
 	defer e.vars.popMe()
 	for {
-		expr := newExpr(e.scanner, e.vars)
+		expr := newStmt(e.scanner, e.vars)
 		func() {
 			e.scanner.pushEnds(TokenColon)
 			defer e.scanner.popEnds(1)
@@ -199,17 +200,16 @@ func (e *objectExecutor) pairs() (val *object, err error) {
 		}()
 		key := expr.value.value.([]byte)
 		func() {
-			e.scanner.pushEnds(TokenComma, TokenParenthesesClose)
+			e.scanner.pushEnds(TokenComma, TokenBraceClose)
 			defer e.scanner.popEnds(2)
-			expr = newExpr(e.scanner, e.vars)
+			expr = newStmt(e.scanner, e.vars)
 			if err = expr.execute(); err != nil {
 				return
 			}
 		}()
 		val.set(key, expr.value)
-		if e.scanner.endAt() == TokenParenthesesClose {
+		if e.scanner.endAt() == TokenBraceClose {
 			return
 		}
 	}
-	return
 }
