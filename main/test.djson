@@ -1,0 +1,7 @@
+name = "test";
+version = "v0.0.1";
+
+{
+  "name": name,
+  "version": version
+};

@@ -36,6 +36,7 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, privs
 	if len(privs) > 0 {
 		priv = privs[0]
 	}
+	val = val.realValue()
 	switch val.Type {
 	case ValueNull:
 		write([]byte{'n', 'u', 'l', 'l'})

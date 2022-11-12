@@ -73,6 +73,7 @@ func exclodeRawToken(tokenType TokenType) bool {
 		TokenColon,
 		TokenComma,
 		TokenReduction,
+		TokenSemicolon,
 	}
 	for _, t := range tokens {
 		if t == tokenType {

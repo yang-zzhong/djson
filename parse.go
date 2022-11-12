@@ -14,12 +14,16 @@ func NewParser(ts TokenScanner) *parser {
 
 func (p *parser) Parse() (val Value, vars *variables, err error) {
 	vars = newVariables()
+	p.scanner.PushEnds(TokenSemicolon)
+	defer p.scanner.PopEnds(1)
+	expr := newStmt(p.scanner, vars)
 	for {
-		expr := newStmt(p.scanner, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
-		val = expr.value
+		if expr.value.Type != ValueNull {
+			val = expr.value
+		}
 		if expr.endAt() == TokenEOF {
 			return
 		}

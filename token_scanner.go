@@ -17,7 +17,6 @@ type tokenScanner struct {
 	readOffset int
 	token      *Token
 	endsWhen   []TokenType
-	ended      bool
 }
 
 var _ TokenScanner = &tokenScanner{}
@@ -58,8 +57,7 @@ func (t *tokenScanner) SetOffset(offset int) {
 func (t *tokenScanner) Scan() (end bool, err error) {
 	for i := len(t.tokens); i <= t.readOffset; i++ {
 		if len(t.tokens) > 0 && t.tokens[len(t.tokens)-1].Type == TokenEOF {
-			end = true
-			return
+			break
 		}
 		token := &Token{}
 		if err = t.lexer.NextToken(token); err != nil {
@@ -71,6 +69,10 @@ func (t *tokenScanner) Scan() (end bool, err error) {
 			continue
 		}
 		t.tokens = append(t.tokens, token)
+	}
+	if len(t.tokens) <= t.readOffset {
+		end = true
+		return
 	}
 	t.token = t.tokens[t.readOffset]
 	if t.token.Type == TokenEOF {
