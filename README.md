@@ -2,7 +2,7 @@
 
 dynamic json, it's a self-explain json, just like bellow
 
-```json
+```
 user = {
     "name": "Oliver",
     "desc": "emmmm, nothing to show around",
@@ -18,7 +18,7 @@ user = {
 
 it's not just like that, we provide more feature to djson, such as native function call, see the example bellow
 
-```json
+```
 # we declare a variable, then we can change it to control the djson behavior
 
 opt = ""
