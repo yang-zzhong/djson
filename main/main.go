@@ -25,10 +25,12 @@ func main() {
 	flag.StringVar(&indent, "indent", "  ", "buffer size, default is \"  \"")
 	flag.Parse()
 	var r io.Reader
+	var f *os.File
+	var err error
 	if input != "" {
 		r = strings.NewReader(input)
 	} else if file != "" {
-		f, err := os.Open(file)
+		f, err = os.Open(file)
 		if err != nil {
 			fmt.Printf("can't open file: %s: %s", file, err.Error())
 			os.Exit(1)
@@ -39,6 +41,11 @@ func main() {
 		os.Exit(1)
 		return
 	}
+	defer func() {
+		if f != nil {
+			f.Close()
+		}
+	}()
 	var encoder djson.Encoder
 	switch outputFormat {
 	case "json":
@@ -48,9 +55,9 @@ func main() {
 		os.Exit(1)
 	}
 	trans := djson.NewTranslator(encoder, djson.BuffSize(bufSize))
-
 	if _, err := trans.Translate(r, os.Stdout); err != nil {
 		fmt.Printf("translate failed: %s", err.Error())
 		os.Exit(1)
 	}
+	os.Exit(0)
 }

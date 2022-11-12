@@ -49,6 +49,13 @@ if err != nil {
 }
 ```
 
+We also provide a binary tool, use the follow command in the root directory of the source code
+
+```bash
+$ go run main/main.go -f main/test.djson
+```
+to understand what it is
+
 ## grammar
 
 assignation
