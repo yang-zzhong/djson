@@ -45,7 +45,7 @@ const (
 	stashSize = 256
 )
 
-type lexer interface {
+type Lexer interface {
 	NextToken(token *Token) error
 }
 

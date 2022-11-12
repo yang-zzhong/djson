@@ -3,7 +3,7 @@ package djson
 import "fmt"
 
 type callable interface {
-	call(k string, caller value, scanner *tokenScanner, vars *variables) (value, error)
+	call(k string, caller Value, scanner TokenScanner, vars *variables) (Value, error)
 }
 
 type callableImp struct {
@@ -11,7 +11,7 @@ type callableImp struct {
 	typ   string
 }
 
-type callback func(caller value, scanner *tokenScanner, vars *variables) (value, error)
+type callback func(caller Value, scanner TokenScanner, vars *variables) (Value, error)
 
 func newCallable(typ string) *callableImp {
 	return &callableImp{typ: typ}
@@ -24,7 +24,7 @@ func (c *callableImp) register(k string, ck callback) {
 	c.calls[k] = ck
 }
 
-func (c *callableImp) call(k string, caller value, scanner *tokenScanner, vars *variables) (val value, err error) {
+func (c *callableImp) call(k string, caller Value, scanner TokenScanner, vars *variables) (val Value, err error) {
 	call, ok := c.calls[k]
 	if !ok {
 		err = fmt.Errorf("undefined method for %s", c.typ)

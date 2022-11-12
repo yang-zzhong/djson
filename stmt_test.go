@@ -11,11 +11,11 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMinus},
 		{Type: TokenNumber, Raw: []byte{'1'}},
 	})
-	expr := newStmt(newTokenScanner(g), nil)
+	expr := newStmt(NewTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.typ == valueInt && expr.value.value.(int64) == 6) {
+	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 6) {
 		t.Fatal("5 + 2 - 1 failed")
 	}
 	// 5 + 2 * 3
@@ -26,11 +26,11 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = newStmt(newTokenScanner(g), nil)
+	expr = newStmt(NewTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.typ == valueInt && expr.value.value.(int64) == 11) {
+	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 11) {
 		t.Fatal("5 + 2 * 3 failed")
 	}
 	// (5 + 2) * 3
@@ -43,11 +43,11 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = newStmt(newTokenScanner(g), nil)
+	expr = newStmt(NewTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.typ == valueInt && expr.value.value.(int64) == 21) {
+	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 21) {
 		t.Fatal("(5 + 2) * 3 failed")
 	}
 	// "hello" + "world"
@@ -56,11 +56,11 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("world")},
 	})
-	expr = newStmt(newTokenScanner(g), nil)
+	expr = newStmt(NewTokenScanner(g), nil)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.typ == valueString && string(expr.value.value.([]byte)) == "helloworld") {
+	if !(expr.value.Type == ValueString && string(expr.value.Value.([]byte)) == "helloworld") {
 		t.Fatal("hello world failed")
 	}
 }
@@ -75,12 +75,12 @@ func TestStmtAssignation(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := newVariables()
-	expr := newStmt(newTokenScanner(g), vs)
+	expr := newStmt(NewTokenScanner(g), vs)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
 	val := vs.get([]byte{'a'})
-	if !(val.typ == valueInt && val.value.(int64) == 8) {
+	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
 		t.Fatal("assign fatal")
 	}
 }
@@ -97,24 +97,24 @@ func TestStmtAssignationWithReduction(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := newVariables()
-	expr := newStmt(newTokenScanner(g), vs)
+	expr := newStmt(NewTokenScanner(g), vs)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
 	val := vs.get([]byte{'a'})
-	if !(val.typ == valueInt && val.value.(int64) == 8) {
+	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
 		t.Fatal("assign fatal")
 	}
 	// a = false => 5 + 3
 	g.tokens[2] = &Token{Type: TokenFalse}
 	g.offset = 0
 	vs = newVariables()
-	expr = newStmt(newTokenScanner(g), vs)
+	expr = newStmt(NewTokenScanner(g), vs)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
 	val = vs.get([]byte{'a'})
-	if val.typ != valueNull {
+	if val.Type != ValueNull {
 		t.Fatal("assign fatal")
 	}
 }
@@ -135,20 +135,20 @@ func TestStmtObjectOperate(t *testing.T) {
 		{Type: TokenBraceClose},
 	})
 	vs := newVariables()
-	expr := newStmt(newTokenScanner(g), vs)
+	expr := newStmt(NewTokenScanner(g), vs)
 	if err := expr.execute(); err != nil {
 		t.Fatal(err)
 	}
-	if expr.value.typ != valueObject {
+	if expr.value.Type != ValueObject {
 		t.Fatal("ret type error")
 	}
-	val := expr.value.value.(*object)
+	val := expr.value.Value.(*Object)
 	hello := val.get([]byte("hello"))
-	if !(hello.typ == valueString && string(hello.value.([]byte)) == "world") {
+	if !(hello.Type == ValueString && string(hello.Value.([]byte)) == "world") {
 		t.Fatal("value of hello error")
 	}
 	world := val.get([]byte("world"))
-	if !(world.typ == valueString && string(world.value.([]byte)) == "hello") {
+	if !(world.Type == ValueString && string(world.Value.([]byte)) == "hello") {
 		t.Fatal("value of world error")
 	}
 }

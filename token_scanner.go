@@ -1,7 +1,18 @@
 package djson
 
+type TokenScanner interface {
+	Forward()
+	PushEnds(...TokenType)
+	PopEnds(int)
+	Offset() int
+	SetOffset(int)
+	Scan() (end bool, err error)
+	Token() *Token
+	EndAt() TokenType
+}
+
 type tokenScanner struct {
-	lexer      lexer
+	lexer      Lexer
 	tokens     []*Token
 	readOffset int
 	token      *Token
@@ -9,7 +20,9 @@ type tokenScanner struct {
 	ended      bool
 }
 
-func newTokenScanner(l lexer, ends ...TokenType) *tokenScanner {
+var _ TokenScanner = &tokenScanner{}
+
+func NewTokenScanner(l Lexer, ends ...TokenType) *tokenScanner {
 	n := &tokenScanner{
 		lexer:    l,
 		token:    &Token{},
@@ -18,27 +31,31 @@ func newTokenScanner(l lexer, ends ...TokenType) *tokenScanner {
 	return n
 }
 
-func (t *tokenScanner) forward() {
+func (t *tokenScanner) Forward() {
 	t.readOffset++
 }
 
-func (t *tokenScanner) pushEnds(tt ...TokenType) {
+func (ts *tokenScanner) Token() *Token {
+	return ts.token
+}
+
+func (t *tokenScanner) PushEnds(tt ...TokenType) {
 	t.endsWhen = append(t.endsWhen, tt...)
 }
 
-func (t *tokenScanner) popEnds(count int) {
+func (t *tokenScanner) PopEnds(count int) {
 	t.endsWhen = t.endsWhen[:len(t.endsWhen)-count]
 }
 
-func (t *tokenScanner) offset() int {
+func (t *tokenScanner) Offset() int {
 	return t.readOffset
 }
 
-func (t *tokenScanner) setOffset(offset int) {
+func (t *tokenScanner) SetOffset(offset int) {
 	t.readOffset = offset
 }
 
-func (t *tokenScanner) scan() (end bool, err error) {
+func (t *tokenScanner) Scan() (end bool, err error) {
 	for i := len(t.tokens); i <= t.readOffset; i++ {
 		if len(t.tokens) > 0 && t.tokens[len(t.tokens)-1].Type == TokenEOF {
 			end = true
@@ -69,6 +86,6 @@ func (t *tokenScanner) scan() (end bool, err error) {
 	return
 }
 
-func (t *tokenScanner) endAt() TokenType {
+func (t *tokenScanner) EndAt() TokenType {
 	return t.token.Type
 }

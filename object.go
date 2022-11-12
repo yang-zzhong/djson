@@ -5,18 +5,18 @@ import (
 	"errors"
 )
 
-type object struct {
+type Object struct {
 	pairs []*pair
 	*callableImp
 }
 
 type pair struct {
 	key []byte
-	val value
+	val Value
 }
 
-func newObject() *object {
-	obj := &object{pairs: []*pair{}, callableImp: newCallable("object")}
+func newObject(pairs ...*pair) *Object {
+	obj := &Object{pairs: pairs, callableImp: newCallable("object")}
 	obj.register("set", setObject)
 	obj.register("replace", replaceObject)
 	obj.register("del", delObject)
@@ -24,71 +24,55 @@ func newObject() *object {
 	return obj
 }
 
-func setObject(val value, nexter *tokenScanner, vars *variables) (value, error) {
-	o := val.value.(*object)
-	return eachPairForSet(o, nexter, vars, func(k []byte, val value, idx int) error {
+func setObject(val Value, nexter TokenScanner, vars *variables) (Value, error) {
+	o := val.Value.(*Object)
+	return eachPairForSet(o, nexter, vars, func(k []byte, val Value, idx int) error {
 		o.pairs[idx].val = val
 		return nil
 	})
 }
 
-func replaceObject(caller value, nexter *tokenScanner, vars *variables) (value, error) {
-	o := caller.value.(*object)
-	return eachPairForSet(o, nexter, vars, func(k []byte, val value, idx int) error {
-		if val.typ != valueObject {
-			return errors.New("replace only support a object as value")
+func replaceObject(caller Value, nexter TokenScanner, vars *variables) (Value, error) {
+	o := caller.Value.(*Object)
+	return eachPairForSet(o, nexter, vars, func(k []byte, val Value, idx int) error {
+		if val.Type != ValueObject {
+			return errors.New("replace only support a object as Value")
 		}
-		obj := val.value.(*object)
+		obj := val.Value.(*Object)
 		o.pairs[idx] = obj.pairs[0]
 		return nil
 	})
 }
 
-func filterObject(caller value, nexter *tokenScanner, vars *variables) (ret value, err error) {
-	o := caller.value.(*object)
+func filterObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+	o := caller.Value.(*Object)
 	no := newObject()
-	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val value, idx int) error {
+	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val Value, idx int) error {
 		no.pairs = append(no.pairs, &pair{key: k, val: val})
 		return nil
 	})
-	ret = value{value: no, typ: valueObject}
+	ret = Value{Value: no, Type: ValueObject}
 	return
 }
 
-func delObject(caller value, nexter *tokenScanner, vars *variables) (ret value, err error) {
-	o := caller.value.(*object)
-	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val value, idx int) error {
+func delObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+	o := caller.Value.(*Object)
+	_, err = eachPairForFilter(o, nexter, vars, func(k []byte, val Value, idx int) error {
 		o.pairs = append(o.pairs[:idx], o.pairs[idx+1:]...)
 		return nil
 	})
 	return
 }
 
-func eachPairForSet(o *object, nexter *tokenScanner, vars *variables, handle func(k []byte, val value, idx int) error) (ret value, err error) {
-	offset := nexter.offset()
-	nexter.pushEnds(TokenParenthesesClose, TokenReduction)
-	defer nexter.popEnds(2)
+func eachPairForSet(o *Object, nexter TokenScanner, vars *variables, handle func(k []byte, val Value, idx int) error) (ret Value, err error) {
+	offset := nexter.Offset()
+	nexter.PushEnds(TokenParenthesesClose)
+	defer nexter.PopEnds(1)
 	for i, p := range o.pairs {
-		nexter.setOffset(offset)
-		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
+		nexter.SetOffset(offset)
+		vars.set([]byte{'k'}, Value{Type: ValueString, Value: p.key})
 		vars.set([]byte{'v'}, p.val)
 		expr := newStmt(nexter, vars)
-		if err = expr.execute(); err != nil {
-			return
-		}
-		if nexter.endAt() == TokenParenthesesClose {
-			if err = handle(p.key, expr.value, i); err != nil {
-				return
-			}
-		}
-		var bv bool
-		if bv, err = expr.value.toBool(); err != nil {
-			return
-		}
-		if !bv {
-			continue
-		}
-		expr = newStmt(nexter, vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
@@ -99,13 +83,13 @@ func eachPairForSet(o *object, nexter *tokenScanner, vars *variables, handle fun
 	return
 }
 
-func eachPairForFilter(o *object, nexter *tokenScanner, vars *variables, handle func(k []byte, val value, idx int) error) (ret value, err error) {
-	offset := nexter.offset()
-	nexter.pushEnds(TokenParenthesesClose)
-	defer nexter.popEnds(1)
+func eachPairForFilter(o *Object, nexter TokenScanner, vars *variables, handle func(k []byte, val Value, idx int) error) (ret Value, err error) {
+	offset := nexter.Offset()
+	nexter.PushEnds(TokenParenthesesClose)
+	defer nexter.PopEnds(1)
 	for i, p := range o.pairs {
-		nexter.setOffset(offset)
-		vars.set([]byte{'k'}, value{typ: valueString, value: p.key})
+		nexter.SetOffset(offset)
+		vars.set([]byte{'k'}, Value{Type: ValueString, Value: p.key})
 		vars.set([]byte{'v'}, p.val)
 		expr := newStmt(nexter, vars)
 		if err = expr.execute(); err != nil {
@@ -123,22 +107,22 @@ func eachPairForFilter(o *object, nexter *tokenScanner, vars *variables, handle 
 	return
 }
 
-func (obj object) copy() *object {
+func (obj Object) copy() *Object {
 	r := newObject()
 	r.pairs = obj.pairs
 	return r
 }
 
-func (obj *object) get(k []byte) value {
+func (obj *Object) get(k []byte) Value {
 	for _, p := range obj.pairs {
 		if bytes.Equal(p.key, k) {
 			return p.val
 		}
 	}
-	return value{typ: valueNull}
+	return Value{Type: ValueNull}
 }
 
-func (obj *object) has(k []byte) bool {
+func (obj *Object) has(k []byte) bool {
 	for _, p := range obj.pairs {
 		if bytes.Equal(p.key, k) {
 			return true
@@ -147,7 +131,7 @@ func (obj *object) has(k []byte) bool {
 	return false
 }
 
-func (obj *object) set(k []byte, val value) {
+func (obj *Object) set(k []byte, val Value) {
 	for i, p := range obj.pairs {
 		if bytes.Equal(p.key, k) {
 			obj.pairs[i] = &pair{key: k, val: val}
@@ -157,7 +141,7 @@ func (obj *object) set(k []byte, val value) {
 	obj.pairs = append(obj.pairs, &pair{key: k, val: val})
 }
 
-func (obj *object) del(k []byte) {
+func (obj *Object) del(k []byte) {
 	for i, p := range obj.pairs {
 		if bytes.Equal(p.key, k) {
 			obj.pairs = append(obj.pairs[:i], obj.pairs[i+1:]...)
@@ -167,12 +151,12 @@ func (obj *object) del(k []byte) {
 }
 
 type objectExecutor struct {
-	scanner *tokenScanner
+	scanner TokenScanner
 	vars    *variables
-	value   *object
+	value   *Object
 }
 
-func newObjectExecutor(scanner *tokenScanner, vars *variables) *objectExecutor {
+func newObjectExecutor(scanner TokenScanner, vars *variables) *objectExecutor {
 	return &objectExecutor{scanner: scanner, vars: vars}
 }
 
@@ -181,34 +165,34 @@ func (e *objectExecutor) execute() (err error) {
 	return
 }
 
-func (e *objectExecutor) pairs() (val *object, err error) {
+func (e *objectExecutor) pairs() (val *Object, err error) {
 	val = newObject()
-	e.vars.pushMe(value{typ: valueObject, value: val})
+	e.vars.pushMe(Value{Type: ValueObject, Value: val})
 	defer e.vars.popMe()
 	for {
 		expr := newStmt(e.scanner, e.vars)
 		func() {
-			e.scanner.pushEnds(TokenColon)
-			defer e.scanner.popEnds(1)
+			e.scanner.PushEnds(TokenColon)
+			defer e.scanner.PopEnds(1)
 			if err = expr.execute(); err != nil {
 				return
 			}
-			if expr.value.typ != valueString {
+			if expr.value.Type != ValueString {
 				err = errors.New("object key must be string")
 				return
 			}
 		}()
-		key := expr.value.value.([]byte)
+		key := expr.value.Value.([]byte)
 		func() {
-			e.scanner.pushEnds(TokenComma, TokenBraceClose)
-			defer e.scanner.popEnds(2)
+			e.scanner.PushEnds(TokenComma, TokenBraceClose)
+			defer e.scanner.PopEnds(2)
 			expr = newStmt(e.scanner, e.vars)
 			if err = expr.execute(); err != nil {
 				return
 			}
 		}()
 		val.set(key, expr.value)
-		if e.scanner.endAt() == TokenBraceClose {
+		if e.scanner.EndAt() == TokenBraceClose {
 			return
 		}
 	}

@@ -6,7 +6,23 @@ import (
 	"regexp"
 )
 
-func encodeJSONIndent(val value, w io.Writer, tab []byte, privs ...[]byte) (totalWrites int, err error) {
+type jsonEncoder struct {
+	indent string
+}
+
+func NewJsonEncoder(indent ...string) *jsonEncoder {
+	id := ""
+	if len(indent) > 0 {
+		id = indent[0]
+	}
+	return &jsonEncoder{id}
+}
+
+func (jt jsonEncoder) Encode(val Value, w io.Writer) (int, error) {
+	return jt.encodeJSONIndent(val, w, []byte(jt.indent))
+}
+
+func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, privs ...[]byte) (totalWrites int, err error) {
 	var writes int
 	write := func(b []byte) bool {
 		writes, err = w.Write(b)
@@ -20,32 +36,32 @@ func encodeJSONIndent(val value, w io.Writer, tab []byte, privs ...[]byte) (tota
 	if len(privs) > 0 {
 		priv = privs[0]
 	}
-	switch val.typ {
-	case valueNull:
+	switch val.Type {
+	case ValueNull:
 		write([]byte{'n', 'u', 'l', 'l'})
 		return
-	case valueString:
-		if write([]byte{'"'}) && write(val.value.([]byte)) && write([]byte{'"'}) {
+	case ValueString:
+		if write([]byte{'"'}) && write(val.Value.([]byte)) && write([]byte{'"'}) {
 			return
 		}
 		return
-	case valueFloat:
-		float := fmt.Sprintf("%f", val.value)
+	case ValueFloat:
+		float := fmt.Sprintf("%f", val.Value)
 		reg := regexp.MustCompile("0*$")
 		n := reg.ReplaceAllString(float, "")
 		write([]byte(n))
-	case valueInt:
-		write([]byte(fmt.Sprintf("%d", val.value)))
-	case valueBool:
-		write(val.value.([]byte))
-	case valueObject:
-		writes, err = encodeObjectJSON(val.value.(*object), w, tab, append(priv, tab...))
+	case ValueInt:
+		write([]byte(fmt.Sprintf("%d", val.Value)))
+	case ValueBool:
+		write(val.Value.([]byte))
+	case ValueObject:
+		writes, err = jt.encodeObjectJSON(val.Value.(*Object), w, tab, append(priv, tab...))
 		if err != nil {
 			return
 		}
 		totalWrites += writes
-	case valueArray:
-		writes, err = encodeArrayJSON(val.value.(*array), w, tab, append(priv, tab...))
+	case ValueArray:
+		writes, err = jt.encodeArrayJSON(val.Value.(*array), w, tab, append(priv, tab...))
 		if err != nil {
 			return
 		}
@@ -54,11 +70,7 @@ func encodeJSONIndent(val value, w io.Writer, tab []byte, privs ...[]byte) (tota
 	return
 }
 
-func encodeJSON(val value, w io.Writer) (totalWrites int, err error) {
-	return encodeJSONIndent(val, w, []byte{})
-}
-
-func encodeObjectJSON(obj *object, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
+func (jt jsonEncoder) encodeObjectJSON(obj *Object, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
 	var writes int
 	write := func(b []byte) bool {
 		writes, err = w.Write(b)
@@ -68,14 +80,11 @@ func encodeObjectJSON(obj *object, w io.Writer, tab []byte, priv []byte) (totalW
 		totalWrites += writes
 		return true
 	}
-	if len(priv) > 0 && !write(priv) {
-		return
-	}
 	if !write([]byte{'{'}) {
 		return
 	}
 	defer func() {
-		if len(priv) > 0 && !write(priv) {
+		if len(obj.pairs) > 0 && !write([]byte{'\n'}) {
 			return
 		}
 		write([]byte{'}'})
@@ -88,7 +97,7 @@ func encodeObjectJSON(obj *object, w io.Writer, tab []byte, priv []byte) (totalW
 		if !(write([]byte{'"'}) && write(p.key) && write([]byte{'"', ':'})) {
 			return
 		}
-		if writes, err = encodeJSON(p.val, w); err != nil {
+		if writes, err = jt.encodeJSONIndent(p.val, w, tab, indent); err != nil {
 			return
 		}
 		totalWrites += writes
@@ -99,7 +108,7 @@ func encodeObjectJSON(obj *object, w io.Writer, tab []byte, priv []byte) (totalW
 	return
 }
 
-func encodeArrayJSON(arr *array, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
+func (jt jsonEncoder) encodeArrayJSON(arr *array, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
 	var writes int
 	write := func(b []byte) bool {
 		writes, err = w.Write(b)
@@ -109,14 +118,11 @@ func encodeArrayJSON(arr *array, w io.Writer, tab []byte, priv []byte) (totalWri
 		totalWrites += writes
 		return true
 	}
-	if len(priv) > 0 && !write(priv) {
-		return
-	}
 	if !write([]byte{'['}) {
 		return
 	}
 	defer func() {
-		if len(priv) > 0 && !write(priv) {
+		if len(arr.items) > 0 && !write([]byte{'\n'}) {
 			return
 		}
 		write([]byte{']'})
@@ -126,10 +132,7 @@ func encodeArrayJSON(arr *array, w io.Writer, tab []byte, priv []byte) (totalWri
 		if len(indent) > 0 && !(write([]byte{'\n'}) && write(indent)) {
 			return
 		}
-		if !write([]byte(fmt.Sprintf("%d", i))) {
-			return
-		}
-		if writes, err = encodeJSON(item, w); err != nil {
+		if writes, err = jt.encodeJSONIndent(item, w, tab, indent); err != nil {
 			return
 		}
 		totalWrites += writes

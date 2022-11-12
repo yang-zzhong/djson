@@ -42,31 +42,31 @@ func TestTokenScanner_next(t *testing.T) {
 		{Type: TokenParenthesesClose, Row: 6, Col: 33},
 		{Type: TokenEOF, Row: 7, Col: 0},
 	})
-	scanner := newTokenScanner(lex)
-	scanner.pushEnds(TokenEOF)
-	scanner.setOffset(2)
-	if _, err := scanner.scan(); err != nil {
+	scanner := NewTokenScanner(lex)
+	scanner.PushEnds(TokenEOF)
+	scanner.SetOffset(2)
+	if _, err := scanner.Scan(); err != nil {
 		t.Fatal(err)
 	}
 	if scanner.token.Type != TokenBraceOpen {
 		t.Fatal("token type not match")
 	}
-	offset := scanner.offset()
+	offset := scanner.Offset()
 	if offset != 2 {
 		t.Fatal("get offset failed")
 	}
-	scanner.forward()
-	if _, err := scanner.scan(); err != nil {
+	scanner.Forward()
+	if _, err := scanner.Scan(); err != nil {
 		t.Fatal(err)
 	}
 	if scanner.token.Type != TokenString {
 		t.Fatal("token type not match after forward")
 	}
-	scanner.pushEnds(TokenAddition)
+	scanner.PushEnds(TokenAddition)
 	if !(len(scanner.endsWhen) == 2 && scanner.endsWhen[1] == TokenAddition) {
 		t.Fatal("push ends error")
 	}
-	scanner.popEnds(1)
+	scanner.PopEnds(1)
 	if !(len(scanner.endsWhen) == 1 && scanner.endsWhen[0] == TokenEOF) {
 		t.Fatal("pop ends error")
 	}

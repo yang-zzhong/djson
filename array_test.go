@@ -5,11 +5,11 @@ import "testing"
 func TestArray_set(t *testing.T) {
 	// arr.set(k == 0 => 4)
 	arr := newArray(
-		value{typ: valueInt, value: int64(1)},
-		value{typ: valueInt, value: int64(2)},
-		value{typ: valueInt, value: int64(3)},
+		Value{Type: ValueInt, Value: int64(1)},
+		Value{Type: ValueInt, Value: int64(2)},
+		Value{Type: ValueInt, Value: int64(3)},
 	)
-	scanner := newTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
 		{Type: TokenEqual},
 		{Type: TokenNumber, Raw: []byte{'0'}},
@@ -17,29 +17,33 @@ func TestArray_set(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'4'}},
 		{Type: TokenParenthesesClose},
 	}))
-	val, err := setArray(value{typ: valueArray, value: arr}, scanner, newVariables())
+	val, err := setArray(Value{Type: ValueArray, Value: arr}, scanner, newVariables())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val.typ != valueNull {
+	if val.Type != ValueNull {
 		t.Fatal("returned error")
+	}
+	val = arr.get(0)
+	if !(val.Type == ValueInt && val.Value.(int64) == 4) {
+		t.Fatal("array set error")
 	}
 }
 
 func TestArray_del(t *testing.T) {
-	// arr.del(k == 0)
+	// arr.del(i == 0)
 	arr := newArray(
-		value{typ: valueInt, value: int64(1)},
-		value{typ: valueInt, value: int64(2)},
-		value{typ: valueInt, value: int64(3)},
+		Value{Type: ValueInt, Value: int64(1)},
+		Value{Type: ValueInt, Value: int64(2)},
+		Value{Type: ValueInt, Value: int64(3)},
 	)
-	scanner := newTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
 		{Type: TokenEqual},
 		{Type: TokenNumber, Raw: []byte{'0'}},
 		{Type: TokenParenthesesClose},
 	}))
-	_, err := delArray(value{typ: valueArray, value: arr}, scanner, newVariables())
+	_, err := delArray(Value{Type: ValueArray, Value: arr}, scanner, newVariables())
 	if err != nil {
 		t.Fatal(err)
 	}

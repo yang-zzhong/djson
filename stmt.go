@@ -20,40 +20,40 @@ import (
 
 type stmt struct {
 	variables *variables
-	value     value
-	scanner   *tokenScanner
+	value     Value
+	scanner   TokenScanner
 }
 
-func newStmt(scanner *tokenScanner, vars *variables) *stmt {
+func newStmt(scanner TokenScanner, vars *variables) *stmt {
 	return &stmt{
 		scanner:   scanner,
 		variables: vars,
-		value:     value{typ: valueNull},
+		value:     Value{Type: ValueNull},
 	}
 }
 
 func (e *stmt) endAt() TokenType {
-	return e.scanner.endAt()
+	return e.scanner.EndAt()
 }
 
 func (e *stmt) execute() (err error) {
-	e.scanner.pushEnds(TokenSemicolon)
-	defer e.scanner.popEnds(1)
+	e.scanner.PushEnds(TokenSemicolon)
+	defer e.scanner.PopEnds(1)
 	defer func() {
-		if e.scanner.token.Type != TokenEOF {
-			e.scanner.forward()
+		if e.scanner.Token().Type != TokenEOF {
+			e.scanner.Forward()
 		}
 	}()
 	e.value, err = e.assign()
 	return
 }
 
-func (e *stmt) assign() (value, error) {
+func (e *stmt) assign() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenAssignation {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if e.scanner.Token().Type == TokenAssignation {
 			e.useToken(func() {
-				var right value
+				var right Value
 				right, err = e.reduct()
 				if err != nil {
 					return
@@ -73,17 +73,17 @@ func (e *stmt) assign() (value, error) {
 	})
 }
 
-func (e *stmt) reduct() (value, error) {
+func (e *stmt) reduct() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenReduction {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if e.scanner.Token().Type == TokenReduction {
 			e.useToken(func() {
 				var b bool
 				b, err = val.toBool()
 				if err != nil || !b {
 					return
 				}
-				var right value
+				var right Value
 				right, err = e.or()
 				if err != nil {
 					return
@@ -103,12 +103,12 @@ func (e *stmt) reduct() (value, error) {
 	})
 }
 
-func (e *stmt) or() (value, error) {
+func (e *stmt) or() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenOr {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if e.scanner.Token().Type == TokenOr {
 			e.useToken(func() {
-				var right value
+				var right Value
 				right, err = e.and()
 				ret, err = val.or(right)
 			})
@@ -124,11 +124,11 @@ func (e *stmt) or() (value, error) {
 	})
 }
 
-func (e *stmt) calc(handle func(input value) (val value, done bool, err error)) (val value, err error) {
+func (e *stmt) calc(handle func(input Value) (val Value, done bool, err error)) (val Value, err error) {
 	var end bool
 	var done bool
 	for {
-		if end, err = e.scanner.scan(); err != nil || end {
+		if end, err = e.scanner.Scan(); err != nil || end {
 			return
 		}
 		val, done, err = handle(val)
@@ -138,12 +138,12 @@ func (e *stmt) calc(handle func(input value) (val value, done bool, err error)) 
 	}
 }
 
-func (e *stmt) and() (value, error) {
+func (e *stmt) and() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenAnd {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if e.scanner.Token().Type == TokenAnd {
 			e.useToken(func() {
-				var right value
+				var right Value
 				right, err = e.compare()
 				ret, err = val.and(right)
 			})
@@ -160,26 +160,26 @@ func (e *stmt) and() (value, error) {
 	})
 }
 
-func (e *stmt) compare() (value, error) {
+func (e *stmt) compare() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		switch e.scanner.token.Type {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		switch e.scanner.Token().Type {
 		case TokenEqual, TokenNotEqual:
 			e.useToken(func() {
-				var right value
+				var right Value
 				right, err = e.expr()
 				if err != nil {
 					return
 				}
 				boo := val.equal(right)
-				if TokenNotEqual == e.scanner.token.Type {
+				if TokenNotEqual == e.scanner.Token().Type {
 					boo = !boo
 				}
-				ret = value{typ: valueBool, value: boo}
+				ret = Value{Type: ValueBool, Value: boo}
 			})
 			return
 		case TokenGreateThan, TokenGreateThanEqual, TokenLessThan, TokenLessThanEqual:
-			var right value
+			var right Value
 			right, err = e.expr()
 			if err != nil {
 				return
@@ -189,15 +189,15 @@ func (e *stmt) compare() (value, error) {
 			if err != nil {
 				return
 			}
-			switch e.scanner.token.Type {
+			switch e.scanner.Token().Type {
 			case TokenGreateThan:
-				ret = value{typ: valueBool, value: com > 0}
+				ret = Value{Type: ValueBool, Value: com > 0}
 			case TokenGreateThanEqual:
-				ret = value{typ: valueBool, value: com >= 0}
+				ret = Value{Type: ValueBool, Value: com >= 0}
 			case TokenLessThan:
-				ret = value{typ: valueBool, value: com < 0}
+				ret = Value{Type: ValueBool, Value: com < 0}
 			case TokenLessThanEqual:
-				ret = value{typ: valueBool, value: com <= 0}
+				ret = Value{Type: ValueBool, Value: com <= 0}
 			}
 			return
 		}
@@ -212,13 +212,13 @@ func (e *stmt) compare() (value, error) {
 	})
 }
 
-func (e *stmt) expr() (value, error) {
+func (e *stmt) expr() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		switch e.scanner.token.Type {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		switch e.scanner.Token().Type {
 		case TokenAddition:
 			e.useToken(func() {
-				var term value
+				var term Value
 				term, err = e.term()
 				if err != nil {
 					return
@@ -228,7 +228,7 @@ func (e *stmt) expr() (value, error) {
 			return
 		case TokenMinus:
 			e.useToken(func() {
-				var term value
+				var term Value
 				term, err = e.term()
 				if err != nil {
 					return
@@ -248,20 +248,20 @@ func (e *stmt) expr() (value, error) {
 	})
 }
 
-func (e *stmt) term() (value, error) {
+func (e *stmt) term() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		switch e.scanner.token.Type {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		switch e.scanner.Token().Type {
 		case TokenMultiplication:
 			e.useToken(func() {
-				var factor value
+				var factor Value
 				factor, err = e.dot()
 				ret, err = val.multiply(factor)
 			})
 			return
 		case TokenDevision:
 			e.useToken(func() {
-				var factor value
+				var factor Value
 				factor, err = e.dot()
 				ret, err = val.devide(factor)
 			})
@@ -278,17 +278,17 @@ func (e *stmt) term() (value, error) {
 	})
 }
 
-func (e *stmt) dot() (value, error) {
+func (e *stmt) dot() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if e.scanner.token.Type == TokenDot {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if e.scanner.Token().Type == TokenDot {
 			e.useToken(func() {
-				var right value
+				var right Value
 				right, err = e.call()
 				if err != nil {
 					return
 				}
-				if right.typ != valueIdentifier {
+				if right.Type != ValueIdentifier {
 					err = errors.New("dot must follow an identifier")
 					return
 				}
@@ -308,14 +308,14 @@ func (e *stmt) dot() (value, error) {
 	})
 }
 
-func (e *stmt) call() (value, error) {
+func (e *stmt) call() (Value, error) {
 	terminated := false
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		if val.typ == valueIdentifier && e.scanner.token.Type == TokenParenthesesOpen {
-			e.scanner.pushEnds(TokenParenthesesClose)
-			defer e.scanner.popEnds(1)
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		if val.Type == ValueIdentifier && e.scanner.Token().Type == TokenParenthesesOpen {
+			e.scanner.PushEnds(TokenParenthesesClose)
+			defer e.scanner.PopEnds(1)
 			e.useToken(func() {
-				ret, err = val.value.(*identifier).call(e.scanner, e.variables)
+				ret, err = val.Value.(*identifier).call(e.scanner, e.variables)
 			})
 			return
 		}
@@ -330,14 +330,14 @@ func (e *stmt) call() (value, error) {
 	})
 }
 
-func (e *stmt) factor() (value, error) {
-	return e.calc(func(val value) (ret value, done bool, err error) {
-		token := e.scanner.token
+func (e *stmt) factor() (Value, error) {
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		token := e.scanner.Token()
 		done = true
 		switch token.Type {
 		case TokenIdentifier:
 			e.useToken(func() {
-				ret = value{typ: valueIdentifier, value: &identifier{
+				ret = Value{Type: ValueIdentifier, Value: &identifier{
 					name:      token.Raw,
 					variables: e.variables,
 				}}
@@ -345,17 +345,17 @@ func (e *stmt) factor() (value, error) {
 			return
 		case TokenTrue:
 			e.useToken(func() {
-				ret = value{value: true, typ: valueBool}
+				ret = Value{Value: true, Type: ValueBool}
 			})
 			return
 		case TokenFalse:
 			e.useToken(func() {
-				ret = value{value: false, typ: valueBool}
+				ret = Value{Value: false, Type: ValueBool}
 			})
 			return
 		case TokenString:
 			e.useToken(func() {
-				ret = value{value: token.Raw, typ: valueString}
+				ret = Value{Value: token.Raw, Type: ValueString}
 			})
 			return
 		case TokenNumber:
@@ -365,8 +365,8 @@ func (e *stmt) factor() (value, error) {
 			return
 		case TokenParenthesesOpen:
 			e.useToken(func() {
-				e.scanner.pushEnds(TokenParenthesesClose)
-				defer e.scanner.popEnds(1)
+				e.scanner.PushEnds(TokenParenthesesClose)
+				defer e.scanner.PopEnds(1)
 				sub := newStmt(e.scanner, e.variables)
 				if err = sub.execute(); err == nil {
 					ret = sub.value
@@ -377,7 +377,7 @@ func (e *stmt) factor() (value, error) {
 			e.useToken(func() {
 				sub := newArrayExecutor(e.scanner, e.variables)
 				if err = sub.execute(); err == nil {
-					ret = value{typ: valueArray, value: sub.value}
+					ret = Value{Type: ValueArray, Value: sub.value}
 				}
 			})
 			return
@@ -385,7 +385,7 @@ func (e *stmt) factor() (value, error) {
 			e.useToken(func() {
 				sub := newObjectExecutor(e.scanner, e.variables)
 				if err = sub.execute(); err == nil {
-					ret = value{typ: valueObject, value: sub.value}
+					ret = Value{Type: ValueObject, Value: sub.value}
 				}
 			})
 			return
@@ -396,16 +396,16 @@ func (e *stmt) factor() (value, error) {
 	})
 }
 
-func (e *stmt) number(bs []byte) value {
+func (e *stmt) number(bs []byte) Value {
 	if bytes.Contains(bs, []byte{'.'}) {
 		v, _ := strconv.ParseFloat(string(bs), 64)
-		return value{typ: valueFloat, value: v}
+		return Value{Type: ValueFloat, Value: v}
 	}
 	v, _ := strconv.ParseInt(string(bs), 10, 64)
-	return value{typ: valueInt, value: v}
+	return Value{Type: ValueInt, Value: v}
 }
 
 func (e *stmt) useToken(useToken func()) {
-	e.scanner.forward()
+	e.scanner.Forward()
 	useToken()
 }

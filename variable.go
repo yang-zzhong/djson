@@ -4,7 +4,7 @@ import "bytes"
 
 type variable struct {
 	name  []byte
-	value value
+	value Value
 }
 
 type variables []variable
@@ -13,7 +13,7 @@ func newVariables() *variables {
 	return &variables{}
 }
 
-func (v *variables) set(name []byte, val value) {
+func (v *variables) set(name []byte, val Value) {
 	for i := range *v {
 		if bytes.Equal((*v)[i].name, name) {
 			(*v)[i] = variable{name: name, value: val}
@@ -23,7 +23,7 @@ func (v *variables) set(name []byte, val value) {
 	*v = append(*v, variable{name: name, value: val})
 }
 
-func (v *variables) get(name []byte) *value {
+func (v *variables) get(name []byte) *Value {
 	for i := range *v {
 		if bytes.Equal((*v)[i].name, name) {
 			return &(*v)[i].value
@@ -32,7 +32,7 @@ func (v *variables) get(name []byte) *value {
 	return nil
 }
 
-func (v *variables) pushMe(val value) {
+func (v *variables) pushMe(val Value) {
 	mk := []byte{'_', 'm', 'e'}
 	me := v.get(mk)
 	if me == nil {

@@ -12,10 +12,10 @@ func newString(bs ...byte) *str {
 	return s
 }
 
-func indexString(val value, scanner *tokenScanner, vars *variables) (ret value, err error) {
+func indexString(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
 	return
 }
 
-func subString(val value, scanner *tokenScanner, vars *variables) (ret value, err error) {
+func subString(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
 	return
 }

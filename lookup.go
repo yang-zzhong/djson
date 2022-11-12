@@ -6,7 +6,7 @@ import (
 )
 
 type lookuper interface {
-	lookup([]byte) value
+	lookup([]byte) Value
 }
 
 func path(p string) []byte {
@@ -24,7 +24,7 @@ func splitKeyAndRest(ik []byte) (k []byte, rest []byte) {
 	return
 }
 
-func (vs variables) lookup(k []byte) value {
+func (vs variables) lookup(k []byte) Value {
 	i, r := splitKeyAndRest(k)
 	for _, v := range vs {
 		if !bytes.Equal(v.name, i) {
@@ -35,35 +35,35 @@ func (vs variables) lookup(k []byte) value {
 		}
 		return v.value.lookup(r)
 	}
-	return value{typ: valueNull}
+	return Value{Type: ValueNull}
 }
 
-func (val value) lookup(k []byte) value {
-	lookup := func() value {
-		lookuper, ok := val.value.(lookuper)
+func (val Value) lookup(k []byte) Value {
+	lookup := func() Value {
+		lookuper, ok := val.Value.(lookuper)
 		if ok {
 			return lookuper.lookup(k)
 		}
-		return value{typ: valueNull}
+		return Value{Type: ValueNull}
 	}
 	i, r := splitKeyAndRest(k)
 	if bytes.Equal(i, []byte{'_', 'p'}) {
-		if val.typ == valueObject && !val.value.(*object).has(i) {
+		if val.Type == ValueObject && !val.Value.(*Object).has(i) {
 			return lookup()
 		}
 		if val.p == nil {
-			return value{typ: valueNull}
+			return Value{Type: ValueNull}
 		}
 		return val.p.lookup(r)
 	}
 	return lookup()
 }
 
-func (obj *object) lookup(k []byte) value {
+func (obj *Object) lookup(k []byte) Value {
 	i, r := splitKeyAndRest(k)
 	if !bytes.Equal(i, []byte{'*'}) {
 		val := obj.get(i)
-		if val.typ == valueNull || len(r) == 0 {
+		if val.Type == ValueNull || len(r) == 0 {
 			return val
 		}
 		return val.lookup(r)
@@ -75,22 +75,22 @@ func (obj *object) lookup(k []byte) value {
 			continue
 		}
 		item := p.val.lookup(r)
-		if item.typ != valueNull {
+		if item.Type != ValueNull {
 			arr.items = append(arr.items, item)
 		}
 	}
-	return value{typ: valueArray, value: arr}
+	return Value{Type: ValueArray, Value: arr}
 }
 
-func (arr *array) lookup(k []byte) value {
+func (arr *array) lookup(k []byte) Value {
 	i, r := splitKeyAndRest(k)
 	if !bytes.Equal(i, []byte{'*'}) {
 		idx, err := strconv.Atoi(string(i))
 		if err != nil {
-			return value{typ: valueNull}
+			return Value{Type: ValueNull}
 		}
 		if idx > len(arr.items) {
-			return value{typ: valueNull}
+			return Value{Type: ValueNull}
 		}
 		if len(r) == 0 {
 			return arr.items[idx]
@@ -98,14 +98,14 @@ func (arr *array) lookup(k []byte) value {
 		return arr.items[idx].lookup(r)
 	}
 	if len(r) == 0 {
-		return value{typ: valueArray, value: arr}
+		return Value{Type: ValueArray, Value: arr}
 	}
 	ret := newArray()
 	for _, item := range arr.items {
 		v := item.lookup(r)
-		if v.typ != valueNull {
+		if v.Type != ValueNull {
 			ret.items = append(ret.items, v)
 		}
 	}
-	return value{typ: valueArray, value: ret}
+	return Value{Type: ValueArray, Value: ret}
 }

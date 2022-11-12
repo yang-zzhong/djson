@@ -2,10 +2,10 @@ package djson
 
 type array struct {
 	*callableImp
-	items []value
+	items []Value
 }
 
-func newArray(items ...value) *array {
+func newArray(items ...Value) *array {
 	arr := &array{
 		callableImp: newCallable("array"),
 		items:       items,
@@ -17,87 +17,59 @@ func newArray(items ...value) *array {
 	return arr
 }
 
-func setArray(val value, scanner *tokenScanner, vars *variables) (value, error) {
-	o := val.value.(*array)
-	return eachItemForSet(o, scanner, vars, func(val value, idx int) error {
+func setArray(val Value, scanner TokenScanner, vars *variables) (Value, error) {
+	o := val.Value.(*array)
+	return eachItemForSet(o, scanner, vars, func(val Value, idx int) error {
 		o.items[idx] = val
 		return nil
 	})
 }
 
-func delArray(caller value, scanner *tokenScanner, vars *variables) (value, error) {
-	o := caller.value.(*array)
-	return eachItemForFilter(o, scanner, vars, func(_ value, idx int) error {
+func delArray(caller Value, scanner TokenScanner, vars *variables) (Value, error) {
+	o := caller.Value.(*array)
+	return eachItemForFilter(o, scanner, vars, func(_ Value, idx int) error {
 		o.items = append(o.items[:idx], o.items[idx+1:]...)
 		return nil
 	})
 }
 
-func filterArray(caller value, scanner *tokenScanner, vars *variables) (ret value, err error) {
-	o := caller.value.(*array)
+func filterArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+	o := caller.Value.(*array)
 	no := newArray()
-	_, err = eachItemForFilter(o, scanner, vars, func(val value, idx int) error {
+	_, err = eachItemForFilter(o, scanner, vars, func(val Value, idx int) error {
 		no.items = append(no.items, val)
 		return nil
 	})
-	ret = value{value: no, typ: valueArray}
+	ret = Value{Value: no, Type: ValueArray}
 	return
 }
 
-func eachItemForSet(o *array, scanner *tokenScanner, vars *variables, handle func(val value, idx int) error) (ret value, err error) {
-	offset := scanner.offset()
+func eachItemForSet(o *array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (ret Value, err error) {
+	offset := scanner.Offset()
 	for i, p := range o.items {
-		scanner.setOffset(offset)
-		vars.set([]byte{'i'}, value{typ: valueInt, value: int64(i)})
+		scanner.SetOffset(offset)
+		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
 		vars.set([]byte{'v'}, p)
-		var bv bool
 		func() {
-			scanner.pushEnds(TokenParenthesesClose, TokenReduction)
-			defer scanner.popEnds(2)
+			scanner.PushEnds(TokenParenthesesClose)
+			defer scanner.PopEnds(1)
 			expr := newStmt(scanner, vars)
 			if err = expr.execute(); err != nil {
 				return
 			}
-			if scanner.endAt() == TokenParenthesesClose {
-				if err = handle(expr.value, i); err != nil {
-					return
-				}
-			}
-			if bv, err = expr.value.toBool(); err != nil {
-				return
-			}
+			err = handle(expr.value, i)
 		}()
-		if err != nil {
-			return
-		}
-		if !bv {
-			continue
-		}
-		func() {
-			scanner.pushEnds(TokenParenthesesClose)
-			defer scanner.popEnds(1)
-			expr := newStmt(scanner, vars)
-			if err = expr.execute(); err != nil {
-				return
-			}
-			if err = handle(expr.value, i); err != nil {
-				return
-			}
-		}()
-		if err != nil {
-			return
-		}
 	}
 	return
 }
 
-func eachItemForFilter(o *array, scanner *tokenScanner, vars *variables, handle func(val value, idx int) error) (ret value, err error) {
-	offset := scanner.offset()
-	scanner.pushEnds(TokenParenthesesClose)
-	defer scanner.popEnds(1)
+func eachItemForFilter(o *array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (ret Value, err error) {
+	offset := scanner.Offset()
+	scanner.PushEnds(TokenParenthesesClose)
+	defer scanner.PopEnds(1)
 	for i, p := range o.items {
-		scanner.setOffset(offset)
-		vars.set([]byte{'i'}, value{typ: valueInt, value: int64(i)})
+		scanner.SetOffset(offset)
+		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
 		vars.set([]byte{'v'}, p)
 		expr := newStmt(scanner, vars)
 		if err = expr.execute(); err != nil {
@@ -115,11 +87,11 @@ func eachItemForFilter(o *array, scanner *tokenScanner, vars *variables, handle 
 	return
 }
 
-func (arr *array) set(idx int, val value) {
+func (arr *array) set(idx int, val Value) {
 	arr.items[idx] = val
 }
 
-func (arr *array) get(idx int) value {
+func (arr *array) get(idx int) Value {
 	return arr.items[idx]
 }
 
@@ -127,7 +99,7 @@ func (arr *array) delAt(idx int) {
 	arr.items = append(arr.items[:idx], arr.items[idx+1:]...)
 }
 
-func (arr *array) del(val ...value) {
+func (arr *array) del(val ...Value) {
 	for i := 0; i < len(arr.items); i++ {
 		for _, v := range val {
 			if arr.items[i].equal(v) {
@@ -138,23 +110,23 @@ func (arr *array) del(val ...value) {
 	}
 }
 
-func (arr *array) append(val ...value) {
+func (arr *array) append(val ...Value) {
 	arr.items = append(arr.items, val...)
 }
 
-func (arr *array) insertAt(idx int, val value) {
+func (arr *array) insertAt(idx int, val Value) {
 	tmp := arr.items[idx:]
 	arr.items = append(arr.items[:idx], val)
 	arr.items = append(arr.items, tmp...)
 }
 
 type arrayExecutor struct {
-	scanner *tokenScanner
+	scanner TokenScanner
 	vars    *variables
 	value   array
 }
 
-func newArrayExecutor(scanner *tokenScanner, vs *variables) *arrayExecutor {
+func newArrayExecutor(scanner TokenScanner, vs *variables) *arrayExecutor {
 	return &arrayExecutor{
 		scanner: scanner,
 		vars:    vs,
@@ -167,9 +139,9 @@ func (e *arrayExecutor) execute() (err error) {
 }
 
 func (e *arrayExecutor) items() (val array, err error) {
-	e.scanner.pushEnds(TokenBracketsClose, TokenComma)
-	defer e.scanner.popEnds(2)
-	e.vars.pushMe(value{typ: valueArray, value: &val})
+	e.scanner.PushEnds(TokenBracketsClose, TokenComma)
+	defer e.scanner.PopEnds(2)
+	e.vars.pushMe(Value{Type: ValueArray, Value: &val})
 	defer e.vars.popMe()
 	for {
 		expr := newStmt(e.scanner, e.vars)
