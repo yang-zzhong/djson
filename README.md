@@ -32,7 +32,7 @@ users = [
   "Miky"
 ];
 
-users.filter(jjname != null && v == "JJ");
+users = users.filter(jjname != null && v == "JJ");
 
 ```
 
@@ -113,9 +113,9 @@ arr.set(i == 0 || v == "hello" => "new hello");
 
 arr.del(i == 0 || v == "hello");
 
-arr1 - arr2 # delete items match arr2 in arr1;
+arr = arr1 - arr2 # delete items match arr2 in arr1;
 
-arr1 + arr2;
+arr = arr1 + arr2;
 
 ```
 object native funcs
@@ -128,12 +128,13 @@ newObj.0 = "world";
 
 val = newObj.0;
 
-obj.set(k == "0" || v == "hello" => "new hello");
+obj = obj.set(k == "0" || v == "hello" => "new hello");
 
-obj.del(k == "0" || v == "hello");
-obj1 - obj2 # delete items match arr2 in arr1;
+obj = obj.del(k == "0" || v == "hello");
 
-obj1 + obj2;
+obj = obj1 - obj2 # delete items match arr2 in arr1;
+
+obj = obj1 + obj2;
 
 ```
 
