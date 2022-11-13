@@ -92,11 +92,7 @@ func eachArrayItem(o Array, scanner TokenScanner, vars *variables, handle func(v
 		if err = expr.execute(); err != nil {
 			return false
 		}
-		var bv bool
-		if bv, err = expr.value.toBool(); err != nil {
-			return false
-		}
-		if !bv {
+		if !expr.value.toBool() {
 			return true
 		}
 		handle(val, i)

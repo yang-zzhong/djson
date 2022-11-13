@@ -122,11 +122,7 @@ func eachObjectItem(o Object, nexter TokenScanner, vars *variables, handle func(
 		if err = expr.execute(); err != nil {
 			return false
 		}
-		var bv bool
-		if bv, err = expr.value.toBool(); err != nil {
-			return false
-		}
-		if !bv {
+		if !expr.value.toBool() {
 			return true
 		}
 		return handle(k, val) == nil

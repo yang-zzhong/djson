@@ -274,32 +274,15 @@ func (left Value) arithmatic(right Value, operator byte) (val Value, err error) 
 	return
 }
 
-func (left Value) and(right Value) (val Value, err error) {
-	return left.logic(right, logicAnd)
+func (left Value) and(right Value) Value {
+	return Value{Type: ValueBool, Value: left.toBool() && right.toBool()}
 }
 
-func (left Value) or(right Value) (val Value, err error) {
-	return left.logic(right, logicOr)
+func (left Value) or(right Value) Value {
+	return Value{Type: ValueBool, Value: left.toBool() || right.toBool()}
 }
 
-func (left Value) logic(right Value, operator int) (val Value, err error) {
-	var lv, rv bool
-	if lv, err = left.toBool(); err != nil {
-		return
-	}
-	if rv, err = right.toBool(); err != nil {
-		return
-	}
-	switch operator {
-	case logicOr:
-		val = Value{Type: ValueBool, Value: lv || rv}
-	case logicAnd:
-		val = Value{Type: ValueBool, Value: lv && rv}
-	}
-	return
-}
-
-func (val Value) toBool() (ret bool, err error) {
+func (val Value) toBool() (ret bool) {
 	val = val.realValue()
 	switch val.Type {
 	case ValueInt:
@@ -314,6 +297,8 @@ func (val Value) toBool() (ret bool, err error) {
 		ret = val.Value.(Object).Total() > 0
 	case ValueBool:
 		ret = val.Value.(bool)
+	case ValueNull:
+		ret = false
 	}
 	return
 }

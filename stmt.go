@@ -77,14 +77,11 @@ func (e *stmt) reduct() (Value, error) {
 	return e.calc(func(val Value) (ret Value, done bool, err error) {
 		if e.scanner.Token().Type == TokenReduction {
 			e.useToken(func() {
-				var b bool
-				b, err = val.toBool()
-				if err != nil || !b {
+				if !val.toBool() {
 					return
 				}
 				var right Value
-				right, err = e.or()
-				if err != nil {
+				if right, err = e.or(); err != nil {
 					return
 				}
 				ret = right
@@ -108,8 +105,10 @@ func (e *stmt) or() (Value, error) {
 		if e.scanner.Token().Type == TokenOr {
 			e.useToken(func() {
 				var right Value
-				right, err = e.and()
-				ret, err = val.or(right)
+				if right, err = e.and(); err != nil {
+					return
+				}
+				ret = val.or(right)
 			})
 		}
 		if terminated {
@@ -143,8 +142,10 @@ func (e *stmt) and() (Value, error) {
 		if e.scanner.Token().Type == TokenAnd {
 			e.useToken(func() {
 				var right Value
-				right, err = e.compare()
-				ret, err = val.and(right)
+				if right, err = e.compare(); err != nil {
+					return
+				}
+				ret = val.and(right)
 			})
 			return
 		}
