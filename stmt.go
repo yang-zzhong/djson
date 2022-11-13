@@ -2,6 +2,7 @@ package djson
 
 import (
 	"bytes"
+	"errors"
 	"strconv"
 )
 
@@ -57,7 +58,11 @@ func (e *stmt) assign() (Value, error) {
 				if err != nil {
 					return
 				}
-				ret, err = val.assign(right)
+				if val.Type != ValueIdentifier {
+					err = errors.New("only identifier can assign to")
+					return
+				}
+				err = val.Value.(Identifier).Assign(right)
 			})
 			return
 		}
@@ -288,7 +293,7 @@ func (e *stmt) dot() (Value, error) {
 		if e.scanner.Token().Type == TokenDot {
 			e.useToken(func() {
 				var right Value
-				right, err = e.call(&val)
+				right, err = e.call(val)
 				if err != nil {
 					return
 				}
@@ -301,22 +306,22 @@ func (e *stmt) dot() (Value, error) {
 			ret = val
 			return
 		}
-		ret, err = e.call(&val)
+		ret, err = e.call(val)
 		terminated = true
 		return
 	})
 }
 
-func (e *stmt) call(left *Value) (Value, error) {
+func (e *stmt) call(left Value) (Value, error) {
 	terminated := false
 	return e.calc(func(val Value) (ret Value, done bool, err error) {
 		if val.Type == ValueIdentifier && e.scanner.Token().Type == TokenParenthesesOpen {
-			identifier := val.Value.(*identifier)
-			identifier.p = left
+			identifier := val.Value.(Identifier)
+			identifier.SetParent(left)
 			e.scanner.PushEnds(TokenParenthesesClose)
 			defer e.scanner.PopEnds(1)
 			e.useToken(func() {
-				ret, err = identifier.call(e.scanner, e.variables)
+				ret, err = identifier.Call(e.scanner, e.variables)
 			})
 			return
 		}
@@ -339,8 +344,8 @@ func (e *stmt) factor() (Value, error) {
 		case TokenIdentifier:
 			e.useToken(func() {
 				ret = Value{Type: ValueIdentifier, Value: &identifier{
-					name:      token.Raw,
-					variables: e.variables,
+					name: token.Raw,
+					vars: e.variables,
 				}}
 			})
 			return

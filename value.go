@@ -37,65 +37,15 @@ const (
 	logicOr
 )
 
-type identifier struct {
-	name      []byte
-	p         *Value
-	variables *variables
-}
-
 type Value struct {
 	Value interface{}
 	Type  ValueType
 	p     *Value
 }
 
-type p struct {
-	key []byte
-	idx int
-}
-
-func (id identifier) value() Value {
-	dots := id.name
-	tmp := &id
-	for tmp.p != nil && tmp.p.Type == ValueIdentifier {
-		tmp = tmp.p.Value.(*identifier)
-		n := append(tmp.name, '.')
-		dots = append(n, dots...)
-	}
-	val := id.variables.lookup(dots)
-	if val.Type == ValueIdentifier {
-		return val.Value.(*identifier).value()
-	}
-	return val
-}
-
-func (id identifier) call(scanner TokenScanner, vars *variables) (val Value, err error) {
-	name := id.name
-	if id.p == nil {
-		err = fmt.Errorf("can't call function [%s] without caller", name)
-		return
-	}
-	val = id.p.realValue()
-	call, ok := val.Value.(callable)
-	if !ok {
-		err = fmt.Errorf("%s can't support call function", valueNames[val.Type])
-		return
-	}
-	return call.call(string(name), val, scanner, vars)
-}
-
-func (left Value) assign(right Value) (val Value, err error) {
-	if left.Type != ValueIdentifier {
-		err = errors.New("only identifier can assign to")
-	}
-	id := left.Value.(*identifier)
-	id.variables.set(id.name, right)
-	return
-}
-
 func (left Value) realValue() (val Value) {
 	if left.Type == ValueIdentifier {
-		val = left.Value.(*identifier).value()
+		val = left.Value.(Identifier).Value()
 		return
 	}
 	val = left

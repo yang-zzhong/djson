@@ -9,8 +9,9 @@ type variable struct {
 
 type variables []variable
 
-func newVariables() *variables {
-	return &variables{}
+func newVariables(vars ...variable) *variables {
+	ret := variables(vars)
+	return &ret
 }
 
 func (v *variables) set(name []byte, val Value) {
