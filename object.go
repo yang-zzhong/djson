@@ -32,7 +32,7 @@ func NewObject(pairs ...*pair) Object {
 	obj.register("set", setObject)
 	obj.register("replace", replaceObject)
 	obj.register("del", delObject)
-	obj.register("filter", filterObject)
+	obj.register("get", getObject)
 	return obj
 }
 
@@ -66,7 +66,7 @@ func replaceObject(caller Value, nexter TokenScanner, vars *variables) (ret Valu
 	return
 }
 
-func filterObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+func getObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
 	o := caller.Value.(*object)
 	no := NewObject()
 	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {

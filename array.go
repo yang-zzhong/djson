@@ -23,32 +23,36 @@ func NewArray(items ...Value) *array {
 		items:       items,
 	}
 	arr.register("set", setArray)
-	arr.register("map", setArray)
 	arr.register("del", delArray)
-	arr.register("filter", filterArray)
+	arr.register("get", getArray)
 	return arr
 }
 
-func setArray(val Value, scanner TokenScanner, vars *variables) (Value, error) {
-	o := val.Value.(Array)
-	return eachItemForSet(o, scanner, vars, func(val Value, idx int) error {
+func setArray(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+	o := val.Value.(Array).Copy()
+	err = eachItemForSet(o, scanner, vars, func(val Value, idx int) error {
 		o.Set(idx, val)
 		return nil
 	})
+	ret = Value{Type: ValueArray, Value: o}
+	return
 }
 
-func delArray(caller Value, scanner TokenScanner, vars *variables) (Value, error) {
+func delArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
 	o := caller.Value.(Array)
-	return eachItemForFilter(o, scanner, vars, func(_ Value, idx int) error {
-		o.Del(idx)
+	r := o.Copy()
+	err = eachArrayItem(o, scanner, vars, func(_ Value, idx int) error {
+		r.Del(idx)
 		return nil
 	})
+	ret = Value{Type: ValueArray, Value: r}
+	return
 }
 
-func filterArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func getArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
 	o := caller.Value.(*array)
 	no := NewArray()
-	_, err = eachItemForFilter(o, scanner, vars, func(val Value, idx int) error {
+	err = eachArrayItem(o, scanner, vars, func(val Value, idx int) error {
 		no.items = append(no.items, val)
 		return nil
 	})
@@ -56,7 +60,7 @@ func filterArray(caller Value, scanner TokenScanner, vars *variables) (ret Value
 	return
 }
 
-func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (ret Value, err error) {
+func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
@@ -76,7 +80,7 @@ func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(
 	return
 }
 
-func eachItemForFilter(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (ret Value, err error) {
+func eachArrayItem(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)

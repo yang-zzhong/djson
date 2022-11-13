@@ -166,38 +166,42 @@ func (e *stmt) compare() (Value, error) {
 		case TokenEqual, TokenNotEqual:
 			e.useToken(func() {
 				var right Value
+				var token = e.scanner.Token()
 				right, err = e.expr()
 				if err != nil {
 					return
 				}
 				boo := val.equal(right)
-				if TokenNotEqual == e.scanner.Token().Type {
+				if TokenNotEqual == token.Type {
 					boo = !boo
 				}
 				ret = Value{Type: ValueBool, Value: boo}
 			})
 			return
 		case TokenGreateThan, TokenGreateThanEqual, TokenLessThan, TokenLessThanEqual:
-			var right Value
-			right, err = e.expr()
-			if err != nil {
-				return
-			}
-			var com int
-			com, err = val.compare(right)
-			if err != nil {
-				return
-			}
-			switch e.scanner.Token().Type {
-			case TokenGreateThan:
-				ret = Value{Type: ValueBool, Value: com > 0}
-			case TokenGreateThanEqual:
-				ret = Value{Type: ValueBool, Value: com >= 0}
-			case TokenLessThan:
-				ret = Value{Type: ValueBool, Value: com < 0}
-			case TokenLessThanEqual:
-				ret = Value{Type: ValueBool, Value: com <= 0}
-			}
+			e.useToken(func() {
+				var right Value
+				var token = e.scanner.Token()
+				right, err = e.expr()
+				if err != nil {
+					return
+				}
+				var com int
+				com, err = val.compare(right)
+				if err != nil {
+					return
+				}
+				switch token.Type {
+				case TokenGreateThan:
+					ret = Value{Type: ValueBool, Value: com > 0}
+				case TokenGreateThanEqual:
+					ret = Value{Type: ValueBool, Value: com >= 0}
+				case TokenLessThan:
+					ret = Value{Type: ValueBool, Value: com < 0}
+				case TokenLessThanEqual:
+					ret = Value{Type: ValueBool, Value: com <= 0}
+				}
+			})
 			return
 		}
 		if terminated {
