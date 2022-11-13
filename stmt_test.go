@@ -142,13 +142,47 @@ func TestStmtObjectOperate(t *testing.T) {
 	if expr.value.Type != ValueObject {
 		t.Fatal("ret type error")
 	}
-	val := expr.value.Value.(*Object)
-	hello := val.get([]byte("hello"))
+	val := expr.value.Value.(Object)
+	hello := val.Get([]byte("hello"))
 	if !(hello.Type == ValueString && string(hello.Value.([]byte)) == "world") {
 		t.Fatal("value of hello error")
 	}
-	world := val.get([]byte("world"))
+	world := val.Get([]byte("world"))
 	if !(world.Type == ValueString && string(world.Value.([]byte)) == "hello") {
 		t.Fatal("value of world error")
+	}
+}
+
+func TestStmtObjectCall(t *testing.T) {
+	// {"hello": "world"}.set(k == "hello" => v + " ^_^")
+	g := newLexMock([]*Token{
+		{Type: TokenBraceOpen},
+		{Type: TokenString, Raw: []byte("hello")},
+		{Type: TokenColon},
+		{Type: TokenString, Raw: []byte("world")},
+		{Type: TokenBraceClose},
+		{Type: TokenDot},
+		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenParenthesesOpen},
+		{Type: TokenIdentifier, Raw: []byte("k")},
+		{Type: TokenEqual},
+		{Type: TokenString, Raw: []byte("hello")},
+		{Type: TokenReduction},
+		{Type: TokenIdentifier, Raw: []byte("v")},
+		{Type: TokenAddition},
+		{Type: TokenString, Raw: []byte(" ^_^")},
+		{Type: TokenParenthesesClose},
+	})
+	vs := newVariables()
+	stmt := newStmt(NewTokenScanner(g), vs)
+	if err := stmt.execute(); err != nil {
+		t.Fatal(err)
+	}
+	if stmt.value.Type != ValueObject {
+		t.Fatal("type error")
+	}
+	hello := stmt.value.Value.(Object).Get([]byte("hello"))
+	if !(hello.Type == ValueString && string(hello.Value.([]byte)) == "world ^_^") {
+		t.Fatal("value error")
 	}
 }

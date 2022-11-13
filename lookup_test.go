@@ -3,7 +3,7 @@ package djson
 import "testing"
 
 func TestLookup(t *testing.T) {
-	v := Value{Type: ValueObject, Value: &Object{
+	v := Value{Type: ValueObject, Value: &object{
 		pairs: []*pair{
 			{
 				key: []byte("val1"),

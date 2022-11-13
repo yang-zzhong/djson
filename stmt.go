@@ -2,7 +2,6 @@ package djson
 
 import (
 	"bytes"
-	"errors"
 	"strconv"
 )
 
@@ -284,15 +283,10 @@ func (e *stmt) dot() (Value, error) {
 		if e.scanner.Token().Type == TokenDot {
 			e.useToken(func() {
 				var right Value
-				right, err = e.call()
+				right, err = e.call(&val)
 				if err != nil {
 					return
 				}
-				if right.Type != ValueIdentifier {
-					err = errors.New("dot must follow an identifier")
-					return
-				}
-				right.p = &val
 				ret = right
 			})
 			return
@@ -302,20 +296,22 @@ func (e *stmt) dot() (Value, error) {
 			ret = val
 			return
 		}
-		ret, err = e.call()
+		ret, err = e.call(&val)
 		terminated = true
 		return
 	})
 }
 
-func (e *stmt) call() (Value, error) {
+func (e *stmt) call(left *Value) (Value, error) {
 	terminated := false
 	return e.calc(func(val Value) (ret Value, done bool, err error) {
 		if val.Type == ValueIdentifier && e.scanner.Token().Type == TokenParenthesesOpen {
+			identifier := val.Value.(*identifier)
+			identifier.p = left
 			e.scanner.PushEnds(TokenParenthesesClose)
 			defer e.scanner.PopEnds(1)
 			e.useToken(func() {
-				ret, err = val.Value.(*identifier).call(e.scanner, e.variables)
+				ret, err = identifier.call(e.scanner, e.variables)
 			})
 			return
 		}

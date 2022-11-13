@@ -47,7 +47,7 @@ func TestJsonEncoderFloat(t *testing.T) {
 
 func TestJsonEncoderArray(t *testing.T) {
 	var buf bytes.Buffer
-	NewJsonEncoder("  ").Encode(Value{Type: ValueArray, Value: newArray(
+	NewJsonEncoder("  ").Encode(Value{Type: ValueArray, Value: NewArray(
 		Value{Type: ValueInt, Value: int64(123)},
 		Value{Type: ValueFloat, Value: float64(1.23)},
 		Value{Type: ValueString, Value: []byte("1.23")},
@@ -58,7 +58,7 @@ func TestJsonEncoderArray(t *testing.T) {
 
 func TestJsonEncoderObject(t *testing.T) {
 	var buf bytes.Buffer
-	NewJsonEncoder("  ").Encode(Value{Type: ValueObject, Value: newObject(
+	NewJsonEncoder("  ").Encode(Value{Type: ValueObject, Value: NewObject(
 		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: int64(123)}},
 		&pair{key: []byte{'1'}, val: Value{Type: ValueFloat, Value: float64(1.23)}},
 		&pair{key: []byte{'2'}, val: Value{Type: ValueString, Value: []byte("1.23")}},

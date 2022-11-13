@@ -56,7 +56,7 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, privs
 	case ValueBool:
 		write(val.Value.([]byte))
 	case ValueObject:
-		writes, err = jt.encodeObjectJSON(val.Value.(*Object), w, tab, append(priv, tab...))
+		writes, err = jt.encodeObjectJSON(val.Value.(*object), w, tab, append(priv, tab...))
 		if err != nil {
 			return
 		}
@@ -71,7 +71,7 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, privs
 	return
 }
 
-func (jt jsonEncoder) encodeObjectJSON(obj *Object, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
+func (jt jsonEncoder) encodeObjectJSON(obj *object, w io.Writer, tab []byte, priv []byte) (totalWrites int, err error) {
 	var writes int
 	write := func(b []byte) bool {
 		writes, err = w.Write(b)

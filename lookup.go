@@ -48,7 +48,7 @@ func (val Value) lookup(k []byte) Value {
 	}
 	i, r := splitKeyAndRest(k)
 	if bytes.Equal(i, []byte{'_', 'p'}) {
-		if val.Type == ValueObject && !val.Value.(*Object).has(i) {
+		if val.Type == ValueObject && !val.Value.(Object).Has(i) {
 			return lookup()
 		}
 		if val.p == nil {
@@ -59,16 +59,16 @@ func (val Value) lookup(k []byte) Value {
 	return lookup()
 }
 
-func (obj *Object) lookup(k []byte) Value {
+func (obj *object) lookup(k []byte) Value {
 	i, r := splitKeyAndRest(k)
 	if !bytes.Equal(i, []byte{'*'}) {
-		val := obj.get(i)
+		val := obj.Get(i)
 		if val.Type == ValueNull || len(r) == 0 {
 			return val
 		}
 		return val.lookup(r)
 	}
-	arr := newArray()
+	arr := NewArray()
 	for _, p := range obj.pairs {
 		if len(r) == 0 {
 			arr.items = append(arr.items, p.val)
@@ -100,7 +100,7 @@ func (arr *array) lookup(k []byte) Value {
 	if len(r) == 0 {
 		return Value{Type: ValueArray, Value: arr}
 	}
-	ret := newArray()
+	ret := NewArray()
 	for _, item := range arr.items {
 		v := item.lookup(r)
 		if v.Type != ValueNull {

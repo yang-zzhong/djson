@@ -4,7 +4,7 @@ import "testing"
 
 func TestArray_set(t *testing.T) {
 	// arr.set(k == 0 => 4)
-	arr := newArray(
+	arr := NewArray(
 		Value{Type: ValueInt, Value: int64(1)},
 		Value{Type: ValueInt, Value: int64(2)},
 		Value{Type: ValueInt, Value: int64(3)},
@@ -24,7 +24,7 @@ func TestArray_set(t *testing.T) {
 	if val.Type != ValueNull {
 		t.Fatal("returned error")
 	}
-	val = arr.get(0)
+	val = arr.Get(0)
 	if !(val.Type == ValueInt && val.Value.(int64) == 4) {
 		t.Fatal("array set error")
 	}
@@ -32,7 +32,7 @@ func TestArray_set(t *testing.T) {
 
 func TestArray_del(t *testing.T) {
 	// arr.del(i == 0)
-	arr := newArray(
+	arr := NewArray(
 		Value{Type: ValueInt, Value: int64(1)},
 		Value{Type: ValueInt, Value: int64(2)},
 		Value{Type: ValueInt, Value: int64(3)},

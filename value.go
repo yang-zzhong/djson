@@ -71,10 +71,15 @@ func (id identifier) value() Value {
 
 func (id identifier) call(scanner TokenScanner, vars *variables) (val Value, err error) {
 	name := id.name
+	if id.p == nil {
+		err = fmt.Errorf("can't call function [%s] without caller", name)
+		return
+	}
 	val = id.p.realValue()
 	call, ok := val.Value.(callable)
 	if !ok {
 		err = fmt.Errorf("%s can't support call function", valueNames[val.Type])
+		return
 	}
 	return call.call(string(name), val, scanner, vars)
 }
@@ -149,40 +154,35 @@ func (left Value) compare(right Value) (int, error) {
 	case ValueString:
 		return bytes.Compare(rlv.Value.([]byte), rrv.Value.([]byte)), nil
 	case ValueObject:
-		lr := rlv.Value.(*Object)
-		rr := rrv.Value.(*Object)
-		if len(lr.pairs) > len(rr.pairs) {
+		lr := rlv.Value.(Object)
+		rr := rrv.Value.(Object)
+		if lr.Total() > rr.Total() {
 			return 1, nil
-		} else if len(lr.pairs) < len(rr.pairs) {
+		} else if lr.Total() < rr.Total() {
 			return -1, nil
 		}
-		for _, p := range lr.pairs {
-			c, err := p.val.compare(rr.get(p.key))
-			if err != nil {
-				return 0, err
-			} else if c != 0 {
-				return c, nil
-			}
-		}
-		return 0, nil
+		var c int
+		var err error
+		lr.Each(func(k []byte, val Value) bool {
+			c, err = val.compare(rr.Get(k))
+			return err == nil && c != 0
+		})
+		return c, err
 	case ValueArray:
-		lr := rlv.Value.(*array)
-		rr := rrv.Value.(*array)
-		if len(lr.items) > len(rr.items) {
+		lr := rlv.Value.(Array)
+		rr := rrv.Value.(Array)
+		if lr.Total() > rr.Total() {
 			return 1, nil
-		} else if len(lr.items) < len(rr.items) {
+		} else if lr.Total() < rr.Total() {
 			return -1, nil
 		}
-		for i, p := range lr.items {
-			c, err := p.compare(rr.items[i])
-			if err != nil {
-				return 0, err
-			}
-			if c != 0 {
-				return c, nil
-			}
-		}
-		return 0, nil
+		var c int
+		var err error
+		lr.Each(func(i int, val Value) bool {
+			c, err = val.compare(rr.Get(i))
+			return err == nil && c != 0
+		})
+		return c, err
 	}
 	return 0, errors.New("not supported type")
 }
@@ -250,21 +250,9 @@ func (left Value) arithmatic(right Value, operator byte) (val Value, err error) 
 	case ValueArray:
 		switch operator {
 		case '+':
-			arr := left.Value.(*array)
-			if right.Type == ValueArray {
-				arr.append(right.Value.(*array).items...)
-			} else {
-				arr.append(right)
-			}
-			val = Value{Type: ValueArray, Value: arr}
+			val = Value{Type: ValueArray, Value: arrayAdd(left.Value.(Array), right)}
 		case '-':
-			arr := left.Value.(*array)
-			if right.Type == ValueArray {
-				arr.del(right.Value.(*array).items...)
-			} else {
-				arr.del(right)
-			}
-			val = Value{Type: ValueArray, Value: arr}
+			val = Value{Type: ValueArray, Value: arrayDel(left.Value.(Array), right)}
 		default:
 			err = fmt.Errorf("unsupported arithmatic for array as left value: %s", []byte{operator})
 		}
@@ -274,20 +262,11 @@ func (left Value) arithmatic(right Value, operator byte) (val Value, err error) 
 			if right.Type != ValueObject {
 				err = fmt.Errorf("unsupported arithmatic for object as right value")
 			}
-			obj := left.Value.(*Object)
-			for _, p := range right.Value.(*Object).pairs {
-				obj.set(p.key, p.val)
-			}
-			val = Value{Type: ValueObject, Value: obj}
+			val = Value{Type: ValueObject, Value: objectAdd(left.Value.(Object), right)}
 		case '-':
-			if right.Type != ValueObject {
-				err = fmt.Errorf("unsupported arithmatic for object as right value")
-			}
-			obj := left.Value.(*Object)
-			for _, p := range right.Value.(*Object).pairs {
-				obj.del(p.key)
-			}
-			val = Value{Type: ValueObject, Value: obj}
+			val = Value{Type: ValueObject, Value: objectDel(left.Value.(Object), right)}
+		default:
+			err = fmt.Errorf("unsupported arithmatic for object as left value: %s", []byte{operator})
 		}
 	default:
 		err = errors.New("unsupported type to arithmatic")
@@ -330,9 +309,9 @@ func (val Value) toBool() (ret bool, err error) {
 	case ValueString:
 		ret = len(val.Value.([]byte)) > 0
 	case ValueArray:
-		ret = len(val.Value.(*array).items) > 0
+		ret = val.Value.(Array).Total() > 0
 	case ValueObject:
-		ret = len(val.Value.(*Object).pairs) > 0
+		ret = val.Value.(Object).Total() > 0
 	case ValueBool:
 		ret = val.Value.(bool)
 	}

@@ -4,7 +4,7 @@ import "testing"
 
 func TestObject_set(t *testing.T) {
 	// obj.set(k == "0" => 4)
-	obj := newObject(
+	obj := NewObject(
 		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: int64(1)}},
 		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: int64(2)}},
 		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: int64(3)}},
@@ -21,10 +21,10 @@ func TestObject_set(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val.Type != ValueNull {
+	if val.Type != ValueObject {
 		t.Fatal("returned error")
 	}
-	val = obj.get([]byte("0"))
+	val = val.Value.(Object).Get([]byte("0"))
 	if !(val.Type == ValueInt && val.Value.(int64) == 4) {
 		t.Fatal("set error")
 	}
@@ -32,7 +32,7 @@ func TestObject_set(t *testing.T) {
 
 func TestObject_del(t *testing.T) {
 	// obj.del(k == "0")
-	obj := newObject(
+	obj := NewObject(
 		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: int64(1)}},
 		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: int64(2)}},
 		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: int64(3)}},
@@ -47,7 +47,7 @@ func TestObject_del(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(obj.pairs) != 2 {
+	if obj.Total() != 2 {
 		t.Fatal("del object error")
 	}
 }
