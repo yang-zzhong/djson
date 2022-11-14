@@ -16,9 +16,9 @@ func (p *parser) Parse() (val Value, vars *variables, err error) {
 	vars = newVariables()
 	p.scanner.PushEnds(TokenSemicolon)
 	defer p.scanner.PopEnds(1)
-	expr := newStmt(p.scanner, vars)
+	expr := NewStmt(p.scanner, vars)
 	for {
-		if err = expr.execute(); err != nil {
+		if err = expr.Execute(); err != nil {
 			return
 		}
 		if expr.value.Type != ValueNull {

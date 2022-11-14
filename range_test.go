@@ -18,8 +18,8 @@ func TestMapRange(t *testing.T) {
 		{Type: TokenIdentifier, Raw: []byte{'v'}},
 		{Type: TokenParenthesesClose},
 	}))
-	s := newStmt(scanner, newVariables())
-	if err := s.execute(); err != nil {
+	s := NewStmt(scanner, newVariables())
+	if err := s.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if s.value.Type != ValueArray {

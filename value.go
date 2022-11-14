@@ -103,7 +103,7 @@ func (left Value) compare(right Value) (int, error) {
 			return -1, nil
 		}
 	case ValueString:
-		return bytes.Compare(rlv.Value.([]byte), rrv.Value.([]byte)), nil
+		return bytes.Compare(rlv.Value.(String).Literal(), rrv.Value.(String).Literal()), nil
 	case ValueObject:
 		lr := rlv.Value.(Object)
 		rr := rrv.Value.(Object)
@@ -197,7 +197,7 @@ func (left Value) arithmatic(right Value, operator byte) (val Value, err error) 
 			return
 		}
 		val.Type = ValueString
-		val.Value = append(left.Value.([]byte), right.Value.([]byte)...)
+		val.Value = NewString(append(left.Value.(String).Literal(), right.Value.(String).Literal()...)...)
 	case ValueArray:
 		switch operator {
 		case '+':
@@ -241,7 +241,7 @@ func (val Value) toBool() (ret bool) {
 	case ValueFloat:
 		ret = int64(val.Value.(float64)) != 0
 	case ValueString:
-		ret = len(val.Value.([]byte)) > 0
+		ret = len(val.Value.(String).Literal()) > 0
 	case ValueArray:
 		ret = val.Value.(Array).Total() > 0
 	case ValueObject:

@@ -70,8 +70,8 @@ func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(
 		vars.set([]byte{'v'}, val)
 		scanner.PushEnds(TokenParenthesesClose)
 		defer scanner.PopEnds(1)
-		expr := newStmt(scanner, vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(scanner, vars)
+		if err = expr.Execute(); err != nil {
 			return false
 		}
 		err = handle(expr.value, i)
@@ -88,8 +88,8 @@ func eachArrayItem(o Array, scanner TokenScanner, vars *variables, handle func(v
 		scanner.SetOffset(offset)
 		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
 		vars.set([]byte{'v'}, val)
-		expr := newStmt(scanner, vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(scanner, vars)
+		if err = expr.Execute(); err != nil {
 			return false
 		}
 		if !expr.value.toBool() {
@@ -194,8 +194,8 @@ func (e *arrayExecutor) items() (val Array, err error) {
 	e.vars.pushMe(Value{Type: ValueArray, Value: &arr})
 	defer e.vars.popMe()
 	for {
-		expr := newStmt(e.scanner, e.vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(e.scanner, e.vars)
+		if err = expr.Execute(); err != nil {
 			return
 		}
 		if expr.value.Type == ValueRange {

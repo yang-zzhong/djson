@@ -18,13 +18,18 @@ import (
 // call -> call identifier(stmt) | factor
 // factor -> digit | identifier | string | null | (call)
 
+type Stmt interface {
+	Execute() error
+	Value() Value
+}
+
 type stmt struct {
 	variables *variables
 	value     Value
 	scanner   TokenScanner
 }
 
-func newStmt(scanner TokenScanner, vars *variables) *stmt {
+func NewStmt(scanner TokenScanner, vars *variables) *stmt {
 	return &stmt{
 		scanner:   scanner,
 		variables: vars,
@@ -36,7 +41,11 @@ func (e *stmt) endAt() TokenType {
 	return e.scanner.EndAt()
 }
 
-func (e *stmt) execute() (err error) {
+func (e *stmt) Value() Value {
+	return e.value
+}
+
+func (e *stmt) Execute() (err error) {
 	e.scanner.PushEnds(TokenSemicolon)
 	defer e.scanner.PopEnds(1)
 	defer func() {
@@ -396,7 +405,7 @@ func (e *stmt) factor() (Value, error) {
 			return
 		case TokenString:
 			e.useToken(func() {
-				ret = Value{Value: token.Raw, Type: ValueString}
+				ret = Value{Value: NewString(token.Raw...), Type: ValueString}
 			})
 			return
 		case TokenNumber:
@@ -408,8 +417,8 @@ func (e *stmt) factor() (Value, error) {
 			e.useToken(func() {
 				e.scanner.PushEnds(TokenParenthesesClose)
 				defer e.scanner.PopEnds(1)
-				sub := newStmt(e.scanner, e.variables)
-				if err = sub.execute(); err == nil {
+				sub := NewStmt(e.scanner, e.variables)
+				if err = sub.Execute(); err == nil {
 					ret = sub.value
 				}
 			})

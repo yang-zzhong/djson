@@ -42,7 +42,7 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, privs
 		write([]byte{'n', 'u', 'l', 'l'})
 		return
 	case ValueString:
-		if write([]byte{'"'}) && write(val.Value.([]byte)) && write([]byte{'"'}) {
+		if write([]byte{'"'}) && write(val.Value.(String).Literal()) && write([]byte{'"'}) {
 			return
 		}
 		return

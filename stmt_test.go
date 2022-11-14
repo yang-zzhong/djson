@@ -11,8 +11,8 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMinus},
 		{Type: TokenNumber, Raw: []byte{'1'}},
 	})
-	expr := newStmt(NewTokenScanner(g), nil)
-	if err := expr.execute(); err != nil {
+	expr := NewStmt(NewTokenScanner(g), nil)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 6) {
@@ -26,8 +26,8 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = newStmt(NewTokenScanner(g), nil)
-	if err := expr.execute(); err != nil {
+	expr = NewStmt(NewTokenScanner(g), nil)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 11) {
@@ -43,8 +43,8 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = newStmt(NewTokenScanner(g), nil)
-	if err := expr.execute(); err != nil {
+	expr = NewStmt(NewTokenScanner(g), nil)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 21) {
@@ -56,11 +56,11 @@ func TestSimpleStmt(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("world")},
 	})
-	expr = newStmt(NewTokenScanner(g), nil)
-	if err := expr.execute(); err != nil {
+	expr = NewStmt(NewTokenScanner(g), nil)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.Type == ValueString && string(expr.value.Value.([]byte)) == "helloworld") {
+	if !(expr.value.Type == ValueString && string(expr.value.Value.(String).Literal()) == "helloworld") {
 		t.Fatal("hello world failed")
 	}
 }
@@ -75,8 +75,8 @@ func TestStmtAssignation(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := newVariables()
-	expr := newStmt(NewTokenScanner(g), vs)
-	if err := expr.execute(); err != nil {
+	expr := NewStmt(NewTokenScanner(g), vs)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	val := vs.get([]byte{'a'})
@@ -97,8 +97,8 @@ func TestStmtAssignationWithReduction(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := newVariables()
-	expr := newStmt(NewTokenScanner(g), vs)
-	if err := expr.execute(); err != nil {
+	expr := NewStmt(NewTokenScanner(g), vs)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	val := vs.get([]byte{'a'})
@@ -109,8 +109,8 @@ func TestStmtAssignationWithReduction(t *testing.T) {
 	g.tokens[2] = &Token{Type: TokenFalse}
 	g.offset = 0
 	vs = newVariables()
-	expr = newStmt(NewTokenScanner(g), vs)
-	if err := expr.execute(); err != nil {
+	expr = NewStmt(NewTokenScanner(g), vs)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	val = vs.get([]byte{'a'})
@@ -135,8 +135,8 @@ func TestStmtObjectOperate(t *testing.T) {
 		{Type: TokenBraceClose},
 	})
 	vs := newVariables()
-	expr := newStmt(NewTokenScanner(g), vs)
-	if err := expr.execute(); err != nil {
+	expr := NewStmt(NewTokenScanner(g), vs)
+	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if expr.value.Type != ValueObject {
@@ -144,11 +144,11 @@ func TestStmtObjectOperate(t *testing.T) {
 	}
 	val := expr.value.Value.(Object)
 	hello := val.Get([]byte("hello"))
-	if !(hello.Type == ValueString && string(hello.Value.([]byte)) == "world") {
+	if !(hello.Type == ValueString && string(hello.Value.(String).Literal()) == "world") {
 		t.Fatal("value of hello error")
 	}
 	world := val.Get([]byte("world"))
-	if !(world.Type == ValueString && string(world.Value.([]byte)) == "hello") {
+	if !(world.Type == ValueString && string(world.Value.(String).Literal()) == "hello") {
 		t.Fatal("value of world error")
 	}
 }
@@ -174,15 +174,15 @@ func TestStmtObjectCall(t *testing.T) {
 		{Type: TokenParenthesesClose},
 	})
 	vs := newVariables()
-	stmt := newStmt(NewTokenScanner(g), vs)
-	if err := stmt.execute(); err != nil {
+	stmt := NewStmt(NewTokenScanner(g), vs)
+	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	if stmt.value.Type != ValueObject {
 		t.Fatal("type error")
 	}
 	hello := stmt.value.Value.(Object).Get([]byte("hello"))
-	if !(hello.Type == ValueString && string(hello.Value.([]byte)) == "world ^_^") {
+	if !(hello.Type == ValueString && string(hello.Value.(String).Literal()) == "world ^_^") {
 		t.Fatal("value error")
 	}
 }

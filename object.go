@@ -92,10 +92,10 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars *variables, handle
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.set([]byte{'k'}, Value{Type: ValueString, Value: k})
+		vars.set([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
 		vars.set([]byte{'v'}, val)
-		expr := newStmt(nexter, vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(nexter, vars)
+		if err = expr.Execute(); err != nil {
 			return false
 		}
 		p := expr.value
@@ -116,10 +116,10 @@ func eachObjectItem(o Object, nexter TokenScanner, vars *variables, handle func(
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.set([]byte{'k'}, Value{Type: ValueString, Value: k})
+		vars.set([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
 		vars.set([]byte{'v'}, val)
-		expr := newStmt(nexter, vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(nexter, vars)
+		if err = expr.Execute(); err != nil {
 			return false
 		}
 		if !expr.value.toBool() {
@@ -157,9 +157,9 @@ func objectDel(obj Object, val Value) Object {
 		val.Value.(Array).Each(func(i int, val Value) bool {
 			switch val.Type {
 			case ValueString:
-				it := ret.Get(val.Value.([]byte))
+				it := ret.Get(val.Value.(String).Literal())
 				if it.Type != ValueNull {
-					ret.Del(val.Value.([]byte))
+					ret.Del(val.Value.(String).Literal())
 				}
 			}
 			return true
@@ -241,11 +241,11 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 	e.vars.pushMe(Value{Type: ValueObject, Value: val})
 	defer e.vars.popMe()
 	for {
-		expr := newStmt(e.scanner, e.vars)
+		expr := NewStmt(e.scanner, e.vars)
 		func() {
 			e.scanner.PushEnds(TokenColon)
 			defer e.scanner.PopEnds(1)
-			if err = expr.execute(); err != nil {
+			if err = expr.Execute(); err != nil {
 				return
 			}
 			if expr.value.Type != ValueString {
@@ -253,12 +253,12 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 				return
 			}
 		}()
-		key := expr.value.Value.([]byte)
+		key := expr.value.Value.(String).Literal()
 		func() {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
 			defer e.scanner.PopEnds(2)
-			expr = newStmt(e.scanner, e.vars)
-			if err = expr.execute(); err != nil {
+			expr = NewStmt(e.scanner, e.vars)
+			if err = expr.Execute(); err != nil {
 				return
 			}
 		}()

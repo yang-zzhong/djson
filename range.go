@@ -25,8 +25,8 @@ func mapRange(val Value, scanner TokenScanner, vars *variables) (ret Value, err 
 		scanner.SetOffset(offset)
 		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
 		vars.set([]byte{'v'}, val)
-		expr := newStmt(scanner, vars)
-		if err = expr.execute(); err != nil {
+		expr := NewStmt(scanner, vars)
+		if err = expr.Execute(); err != nil {
 			return false
 		}
 		r.Append(expr.value)
