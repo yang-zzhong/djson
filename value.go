@@ -17,6 +17,7 @@ const (
 	ValueInt
 	ValueBool
 	ValueIdentifier
+	ValueRange
 )
 
 var (

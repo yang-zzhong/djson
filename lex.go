@@ -20,6 +20,7 @@ const (
 	stateEq
 	stateReduction
 	stateExclamation
+	stateMaybeRange
 	stateComment
 	stateLt
 	stateNeq
@@ -109,6 +110,8 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 			catched, err = g.matchComplete(b, token)
 		case stateEqStarted:
 			catched, err = g.matchLogicEq(b, token)
+		case stateMaybeRange:
+			catched, err = g.matchRange(b, token)
 		case stateLt:
 			catched, err = g.matchLogicLte(b, token)
 		case stateGt:
@@ -136,6 +139,17 @@ func (g *lexer_) NextToken(token *Token) (err error) {
 
 func (g *lexer_) matchComplete(b byte, token *Token) (bool, error) {
 	return g.shiftState(0, stateVoid, token), nil
+}
+
+func (g *lexer_) matchRange(b byte, token *Token) (bool, error) {
+	if bytes.Equal(g.stash[:3], []byte{'.', '.', '.'}) {
+		return g.matchVoid(b, token)
+	} else if b == '.' {
+		g.addToStash(b)
+		return false, nil
+	}
+	g.state = stateBlockSeperator
+	return g.matchVoid(b, token)
 }
 
 func (g *lexer_) matchAnd(b byte, token *Token) (bool, error) {
@@ -346,8 +360,10 @@ func (g *lexer_) matchNormal(b byte, token *Token) (bool, error) {
 
 func (g *lexer_) matchSimple(b byte, token *Token) (matched bool, catched bool) {
 	switch b {
-	case '{', '}', '[', ']', ',', '(', ')', ':', '.', ';':
+	case '{', '}', '[', ']', ',', '(', ')', ':', ';':
 		return true, g.shiftState(b, stateBlockSeperator, token)
+	case '.':
+		return true, g.shiftState(b, stateMaybeRange, token)
 	case '=':
 		return true, g.shiftState(b, stateEqStarted, token)
 	case '+':
@@ -456,6 +472,8 @@ func (g *lexer_) shiftState(b byte, state parseState, token *Token) bool {
 				return TokenExclamation
 			case stateComment:
 				return TokenComment
+			case stateMaybeRange:
+				return TokenRange
 			case stateNull:
 				return TokenNull
 			case stateNeq:

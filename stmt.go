@@ -341,6 +341,11 @@ func (e *stmt) factor() (Value, error) {
 		token := e.scanner.Token()
 		done = true
 		switch token.Type {
+		case TokenRange:
+			e.useToken(func() {
+				ret = Value{Type: ValueRange}
+			})
+			return
 		case TokenIdentifier:
 			e.useToken(func() {
 				ret = Value{Type: ValueIdentifier, Value: &identifier{

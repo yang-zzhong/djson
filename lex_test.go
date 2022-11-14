@@ -2,6 +2,7 @@ package djson
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -69,6 +70,27 @@ func TestLexer_string(t *testing.T) {
 			t.Fatalf("error occurred at %d", i)
 		}
 		t.Logf("token: %#v\n", token)
+	}
+}
+
+func TestLexer_range(t *testing.T) {
+	data := "[1 ... 10]"
+	g := NewLexer(strings.NewReader(data), 16)
+	tokens := []*Token{
+		{Type: TokenBracketsOpen},
+		{Type: TokenNumber, Raw: []byte{'1'}},
+		{Type: TokenRange},
+		{Type: TokenNumber, Raw: []byte{'1', '0'}},
+		{Type: TokenBracketsClose},
+	}
+	var token Token
+	for i, to := range tokens {
+		if err := g.NextToken(&token); err != nil {
+			t.Fatal(err)
+		}
+		if to.Type != token.Type {
+			t.Fatalf("token type error at %d", i)
+		}
 	}
 }
 
