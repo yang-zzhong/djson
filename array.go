@@ -169,10 +169,6 @@ func (arr *array) Append(val ...Value) {
 	arr.items = append(arr.items, val...)
 }
 
-func (arr *array) del(val ...Value) {
-
-}
-
 type arrayExecutor struct {
 	scanner TokenScanner
 	vars    *variables
@@ -192,19 +188,25 @@ func (e *arrayExecutor) execute() (err error) {
 }
 
 func (e *arrayExecutor) items() (val Array, err error) {
-	val = NewArray()
+	arr := NewArray()
 	e.scanner.PushEnds(TokenBracketsClose, TokenComma)
 	defer e.scanner.PopEnds(2)
-	e.vars.pushMe(Value{Type: ValueArray, Value: &val})
+	e.vars.pushMe(Value{Type: ValueArray, Value: &arr})
 	defer e.vars.popMe()
 	for {
 		expr := newStmt(e.scanner, e.vars)
 		if err = expr.execute(); err != nil {
 			return
 		}
-		val.Append(expr.value)
-		if expr.endAt() == TokenBracketsClose {
+		if expr.value.Type == ValueRange {
+			val = expr.value.Value.(Array)
 			return
 		}
+		arr.Append(expr.value)
+		if expr.endAt() == TokenBracketsClose {
+			break
+		}
 	}
+	val = arr
+	return
 }

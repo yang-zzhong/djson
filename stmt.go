@@ -330,6 +330,41 @@ func (e *stmt) call(left Value) (Value, error) {
 			ret = val
 			return
 		}
+		ret, err = e.ranges()
+		terminated = true
+		return
+	})
+}
+
+func (e *stmt) ranges() (Value, error) {
+	terminated := false
+	return e.calc(func(val Value) (ret Value, done bool, err error) {
+		token := e.scanner.Token()
+		if token.Type == TokenRange {
+			if val.Type != ValueInt {
+				err = errors.New("range ... must follow an int and be followed by an int too")
+				return
+			}
+			e.useToken(func() {
+				begin := val.Value.(int64)
+				var right Value
+				right, err = e.factor()
+				if err != nil {
+					return
+				}
+				if right.Type != ValueInt {
+					err = errors.New("range ... must follow an int and be followed by an int too")
+					return
+				}
+				ret = Value{Type: ValueRange, Value: NewRange(int(begin), int(right.Value.(int64)))}
+			})
+			return
+		}
+		if terminated {
+			done = true
+			ret = val
+			return
+		}
 		ret, err = e.factor()
 		terminated = true
 		return
@@ -341,11 +376,6 @@ func (e *stmt) factor() (Value, error) {
 		token := e.scanner.Token()
 		done = true
 		switch token.Type {
-		case TokenRange:
-			e.useToken(func() {
-				ret = Value{Type: ValueRange}
-			})
-			return
 		case TokenIdentifier:
 			e.useToken(func() {
 				ret = Value{Type: ValueIdentifier, Value: &identifier{
