@@ -52,9 +52,8 @@ type Lexer interface {
 type lexer_ struct {
 	source        io.Reader
 	row, col      int
-	offset        int
-	buf           []byte
-	max           int
+	bs            []byte
+	buf           Buffer
 	state         parseState
 	stash         []byte
 	stashStartRow int
@@ -67,8 +66,9 @@ type lexer_ struct {
 func NewLexer(source io.Reader, bufSize uint) *lexer_ {
 	return &lexer_{
 		source: source,
-		row:    0, col: 0, offset: 0,
-		buf: make([]byte, bufSize), max: 0,
+		row:    0, col: 0,
+		buf:   NewBuffer(source, int(bufSize)),
+		bs:    make([]byte, 1),
 		state: stateStart,
 		stash: make([]byte, stashSize),
 	}
@@ -396,20 +396,10 @@ func (g *lexer_) matchSimple(b byte, token *Token) (matched bool, catched bool) 
 }
 
 func (g *lexer_) nextChar(b *byte) error {
-	if g.offset == g.max {
-		var err error
-		for {
-			if g.max, err = g.source.Read(g.buf); err != nil {
-				return err
-			} else if g.max == 0 {
-				continue
-			}
-			g.offset = 0
-			break
-		}
+	if _, err := g.buf.Take(g.bs); err != nil {
+		return err
 	}
-	*b = g.buf[g.offset]
-	g.offset++
+	*b = g.bs[0]
 	return nil
 }
 
