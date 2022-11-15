@@ -3,10 +3,10 @@ package djson
 import "testing"
 
 func TestIdentifier_Value(t *testing.T) {
-	vs := newVariables(
-		variable{
-			name: []byte("hello"),
-			value: Value{
+	vs := NewContext(
+		Variable{
+			Name: []byte("hello"),
+			Value: Value{
 				Type: ValueArray,
 				Value: NewArray(
 					Value{Type: ValueInt, Value: int64(1)},
@@ -25,10 +25,10 @@ func TestIdentifier_Value(t *testing.T) {
 }
 
 func TestIdentifier_Assign(t *testing.T) {
-	vs := newVariables(
-		variable{
-			name: []byte("hello"),
-			value: Value{
+	vs := NewContext(
+		Variable{
+			Name: []byte("hello"),
+			Value: Value{
 				Type: ValueArray,
 				Value: NewArray(
 					Value{Type: ValueInt, Value: int64(1)},

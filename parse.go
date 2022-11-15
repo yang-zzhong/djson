@@ -1,7 +1,7 @@
 package djson
 
 type Parser interface {
-	Parse() (val Value, vars *variables, err error)
+	Parse() (val Value, vars *ctx, err error)
 }
 
 type parser struct {
@@ -12,8 +12,8 @@ func NewParser(ts TokenScanner) *parser {
 	return &parser{scanner: ts}
 }
 
-func (p *parser) Parse() (val Value, vars *variables, err error) {
-	vars = newVariables()
+func (p *parser) Parse() (val Value, vars *ctx, err error) {
+	vars = NewContext()
 	p.scanner.PushEnds(TokenSemicolon)
 	defer p.scanner.PopEnds(1)
 	expr := NewStmt(p.scanner, vars)

@@ -6,7 +6,7 @@ import (
 )
 
 type callable interface {
-	call(k string, caller Value, scanner TokenScanner, vars *variables) (Value, error)
+	call(k string, caller Value, scanner TokenScanner, vars Context) (Value, error)
 }
 
 type callableImp struct {
@@ -14,7 +14,7 @@ type callableImp struct {
 	typ   string
 }
 
-type callback func(caller Value, scanner TokenScanner, vars *variables) (Value, error)
+type callback func(caller Value, scanner TokenScanner, vars Context) (Value, error)
 
 func newCallable(typ string) *callableImp {
 	return &callableImp{typ: typ}
@@ -27,7 +27,7 @@ func (c *callableImp) register(k string, ck callback) {
 	c.calls[k] = ck
 }
 
-func (c *callableImp) call(k string, caller Value, scanner TokenScanner, vars *variables) (val Value, err error) {
+func (c *callableImp) call(k string, caller Value, scanner TokenScanner, vars Context) (val Value, err error) {
 	call, ok := c.calls[k]
 	if !ok {
 		call, ok = c.caseInsensitiveCallback(k)

@@ -29,7 +29,7 @@ func (s *str) Literal() []byte {
 	return s.bytes
 }
 
-func indexString(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	stmt := NewStmt(scanner, vars)
@@ -46,7 +46,7 @@ func indexString(val Value, scanner TokenScanner, vars *variables) (ret Value, e
 	return
 }
 
-func subString(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func subString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	stmt := NewStmt(scanner, vars)
@@ -86,7 +86,7 @@ func subString(val Value, scanner TokenScanner, vars *variables) (ret Value, err
 	return
 }
 
-func matchString(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func matchString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	stmt := NewStmt(scanner, vars)

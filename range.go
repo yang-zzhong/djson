@@ -16,15 +16,15 @@ func NewRange(from, to int) *range_ {
 	return rg
 }
 
-func mapRange(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	r := NewArray()
 	val.Value.(Array).Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
-		vars.set([]byte{'v'}, val)
+		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
+		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false

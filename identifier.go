@@ -10,17 +10,17 @@ type Identifier interface {
 	Value() Value
 	Assign(val Value) error
 	SetParent(p Value)
-	Call(scanner TokenScanner, vars *variables) (val Value, err error)
+	Call(scanner TokenScanner, vars Context) (val Value, err error)
 }
 
 type identifier struct {
 	name []byte
 	p    Value
-	vars *variables
+	vars Context
 }
 
-func NewIdentifier(name []byte, vars *variables) *identifier {
-	return &identifier{name: name, vars: vars}
+func NewIdentifier(name []byte, ctx Context) *identifier {
+	return &identifier{name: name, vars: ctx}
 }
 
 func (id *identifier) SetParent(p Value) {
@@ -43,8 +43,8 @@ func (id identifier) Assign(right Value) error {
 	if err != nil {
 		return err
 	}
-	if vars, ok := root.(*variables); ok {
-		vars.set(id.name, right)
+	if vars, ok := root.(*ctx); ok {
+		vars.Assign(id.name, right)
 		return nil
 	} else if obj, ok := root.(Object); ok {
 		obj.Set(id.name, right)
@@ -91,7 +91,7 @@ func (id identifier) root() (root interface{}, err error) {
 	return
 }
 
-func (id identifier) Call(scanner TokenScanner, vars *variables) (val Value, err error) {
+func (id identifier) Call(scanner TokenScanner, ctx Context) (val Value, err error) {
 	name := id.name
 	if id.p.Type == ValueNull {
 		err = fmt.Errorf("can't call function [%s] without caller", name)
@@ -103,5 +103,5 @@ func (id identifier) Call(scanner TokenScanner, vars *variables) (val Value, err
 		err = fmt.Errorf("%s can't support call function", valueNames[val.Type])
 		return
 	}
-	return call.call(string(name), val, scanner, vars)
+	return call.call(string(name), val, scanner, ctx)
 }

@@ -17,7 +17,7 @@ func TestObject_set(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'4'}},
 		{Type: TokenParenthesesClose},
 	}))
-	val, err := setObject(Value{Type: ValueArray, Value: obj}, scanner, newVariables())
+	val, err := setObject(Value{Type: ValueArray, Value: obj}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestObject_del(t *testing.T) {
 		{Type: TokenString, Raw: []byte{'0'}},
 		{Type: TokenParenthesesClose},
 	}))
-	_, err := delObject(Value{Type: ValueArray, Value: obj}, scanner, newVariables())
+	_, err := delObject(Value{Type: ValueArray, Value: obj}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}

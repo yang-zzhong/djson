@@ -36,7 +36,7 @@ func NewObject(pairs ...*pair) Object {
 	return obj
 }
 
-func setObject(val Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+func setObject(val Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := val.Value.(Object)
 	r := NewObject()
 	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
@@ -47,7 +47,7 @@ func setObject(val Value, nexter TokenScanner, vars *variables) (ret Value, err 
 	return
 }
 
-func replaceObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+func replaceObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(Object)
 	r := NewObject()
 	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
@@ -66,7 +66,7 @@ func replaceObject(caller Value, nexter TokenScanner, vars *variables) (ret Valu
 	return
 }
 
-func getObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+func getObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(*object)
 	no := NewObject()
 	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {
@@ -77,7 +77,7 @@ func getObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, e
 	return
 }
 
-func delObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, err error) {
+func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(Object)
 	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {
 		o.Del(k)
@@ -86,14 +86,14 @@ func delObject(caller Value, nexter TokenScanner, vars *variables) (ret Value, e
 	return
 }
 
-func eachObjectItemForSet(o Object, nexter TokenScanner, vars *variables, handle func(k []byte, val Value) error) (err error) {
+func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
 	offset := nexter.Offset()
 	nexter.PushEnds(TokenParenthesesClose)
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.set([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
-		vars.set([]byte{'v'}, val)
+		vars.Assign([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
+		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(nexter, vars)
 		if err = expr.Execute(); err != nil {
 			return false
@@ -110,14 +110,14 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars *variables, handle
 	return
 }
 
-func eachObjectItem(o Object, nexter TokenScanner, vars *variables, handle func(k []byte, val Value) error) (err error) {
+func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
 	offset := nexter.Offset()
 	nexter.PushEnds(TokenParenthesesClose)
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.set([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
-		vars.set([]byte{'v'}, val)
+		vars.Assign([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
+		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(nexter, vars)
 		if err = expr.Execute(); err != nil {
 			return false
@@ -223,11 +223,11 @@ func (obj *object) Each(handle func(k []byte, val Value) bool) {
 
 type objectExecutor struct {
 	scanner TokenScanner
-	vars    *variables
+	vars    Context
 	value   Object
 }
 
-func newObjectExecutor(scanner TokenScanner, vars *variables) *objectExecutor {
+func newObjectExecutor(scanner TokenScanner, vars Context) *objectExecutor {
 	return &objectExecutor{scanner: scanner, vars: vars}
 }
 

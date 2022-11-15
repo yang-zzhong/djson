@@ -17,7 +17,7 @@ func TestArray_set(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'4'}},
 		{Type: TokenParenthesesClose},
 	}))
-	val, err := setArray(Value{Type: ValueArray, Value: arr}, scanner, newVariables())
+	val, err := setArray(Value{Type: ValueArray, Value: arr}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestArray_del(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'0'}},
 		{Type: TokenParenthesesClose},
 	}))
-	newArr, err := delArray(Value{Type: ValueArray, Value: arr}, scanner, newVariables())
+	newArr, err := delArray(Value{Type: ValueArray, Value: arr}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestArray_get(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'1'}},
 		{Type: TokenParenthesesClose},
 	}))
-	val, err := getArray(Value{Type: ValueArray, Value: arr}, scanner, newVariables())
+	val, err := getArray(Value{Type: ValueArray, Value: arr}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}

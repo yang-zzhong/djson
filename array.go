@@ -28,7 +28,7 @@ func NewArray(items ...Value) *array {
 	return arr
 }
 
-func setArray(val Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func setArray(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	o := val.Value.(Array).Copy()
 	err = eachItemForSet(o, scanner, vars, func(val Value, idx int) error {
 		o.Set(idx, val)
@@ -38,7 +38,7 @@ func setArray(val Value, scanner TokenScanner, vars *variables) (ret Value, err 
 	return
 }
 
-func delArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func delArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(Array)
 	r := o.Copy()
 	err = eachArrayItem(o, scanner, vars, func(_ Value, idx int) error {
@@ -49,7 +49,7 @@ func delArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, e
 	return
 }
 
-func getArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, err error) {
+func getArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(*array)
 	no := NewArray()
 	err = eachArrayItem(o, scanner, vars, func(val Value, idx int) error {
@@ -60,14 +60,14 @@ func getArray(caller Value, scanner TokenScanner, vars *variables) (ret Value, e
 	return
 }
 
-func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (err error) {
+func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
-		vars.set([]byte{'v'}, val)
+		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
+		vars.Assign([]byte{'v'}, val)
 		scanner.PushEnds(TokenParenthesesClose)
 		defer scanner.PopEnds(1)
 		expr := NewStmt(scanner, vars)
@@ -80,14 +80,14 @@ func eachItemForSet(o Array, scanner TokenScanner, vars *variables, handle func(
 	return
 }
 
-func eachArrayItem(o Array, scanner TokenScanner, vars *variables, handle func(val Value, idx int) error) (err error) {
+func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.set([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
-		vars.set([]byte{'v'}, val)
+		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
+		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
@@ -171,11 +171,11 @@ func (arr *array) Append(val ...Value) {
 
 type arrayExecutor struct {
 	scanner TokenScanner
-	vars    *variables
+	vars    Context
 	value   Array
 }
 
-func newArrayExecutor(scanner TokenScanner, vs *variables) *arrayExecutor {
+func newArrayExecutor(scanner TokenScanner, vs Context) *arrayExecutor {
 	return &arrayExecutor{
 		scanner: scanner,
 		vars:    vs,

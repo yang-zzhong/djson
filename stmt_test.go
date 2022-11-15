@@ -74,12 +74,12 @@ func TestStmtAssignation(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	vs := newVariables()
+	vs := NewContext()
 	expr := NewStmt(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	val := vs.get([]byte{'a'})
+	val := vs.ValueOf([]byte{'a'})
 	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
 		t.Fatal("assign fatal")
 	}
@@ -96,24 +96,24 @@ func TestStmtAssignationWithReduction(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	vs := newVariables()
+	vs := NewContext()
 	expr := NewStmt(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	val := vs.get([]byte{'a'})
+	val := vs.ValueOf([]byte{'a'})
 	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
 		t.Fatal("assign fatal")
 	}
 	// a = false => 5 + 3
 	g.tokens[2] = &Token{Type: TokenFalse}
 	g.offset = 0
-	vs = newVariables()
+	vs = NewContext()
 	expr = NewStmt(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	val = vs.get([]byte{'a'})
+	val = vs.ValueOf([]byte{'a'})
 	if val.Type != ValueNull {
 		t.Fatal("assign fatal")
 	}
@@ -134,7 +134,7 @@ func TestStmtObjectOperate(t *testing.T) {
 		{Type: TokenString, Raw: []byte("hello")},
 		{Type: TokenBraceClose},
 	})
-	vs := newVariables()
+	vs := NewContext()
 	expr := NewStmt(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
@@ -173,7 +173,7 @@ func TestStmtObjectCall(t *testing.T) {
 		{Type: TokenString, Raw: []byte(" ^_^")},
 		{Type: TokenParenthesesClose},
 	})
-	vs := newVariables()
+	vs := NewContext()
 	stmt := NewStmt(NewTokenScanner(g), vs)
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)

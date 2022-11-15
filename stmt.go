@@ -24,16 +24,16 @@ type Stmt interface {
 }
 
 type stmt struct {
-	variables *variables
-	value     Value
-	scanner   TokenScanner
+	ctx     Context
+	value   Value
+	scanner TokenScanner
 }
 
-func NewStmt(scanner TokenScanner, vars *variables) *stmt {
+func NewStmt(scanner TokenScanner, vars Context) *stmt {
 	return &stmt{
-		scanner:   scanner,
-		variables: vars,
-		value:     Value{Type: ValueNull},
+		scanner: scanner,
+		ctx:     vars,
+		value:   Value{Type: ValueNull},
 	}
 }
 
@@ -330,7 +330,7 @@ func (e *stmt) call(left Value) (Value, error) {
 			e.scanner.PushEnds(TokenParenthesesClose)
 			defer e.scanner.PopEnds(1)
 			e.useToken(func() {
-				ret, err = identifier.Call(e.scanner, e.variables)
+				ret, err = identifier.Call(e.scanner, e.ctx)
 			})
 			return
 		}
@@ -389,7 +389,7 @@ func (e *stmt) factor() (Value, error) {
 			e.useToken(func() {
 				ret = Value{Type: ValueIdentifier, Value: &identifier{
 					name: token.Raw,
-					vars: e.variables,
+					vars: e.ctx,
 				}}
 			})
 			return
@@ -417,7 +417,7 @@ func (e *stmt) factor() (Value, error) {
 			e.useToken(func() {
 				e.scanner.PushEnds(TokenParenthesesClose)
 				defer e.scanner.PopEnds(1)
-				sub := NewStmt(e.scanner, e.variables)
+				sub := NewStmt(e.scanner, e.ctx)
 				if err = sub.Execute(); err == nil {
 					ret = sub.value
 				}
@@ -425,7 +425,7 @@ func (e *stmt) factor() (Value, error) {
 			return
 		case TokenBracketsOpen:
 			e.useToken(func() {
-				sub := newArrayExecutor(e.scanner, e.variables)
+				sub := newArrayExecutor(e.scanner, e.ctx)
 				if err = sub.execute(); err == nil {
 					ret = Value{Type: ValueArray, Value: sub.value}
 				}
@@ -433,7 +433,7 @@ func (e *stmt) factor() (Value, error) {
 			return
 		case TokenBraceOpen:
 			e.useToken(func() {
-				sub := newObjectExecutor(e.scanner, e.variables)
+				sub := newObjectExecutor(e.scanner, e.ctx)
 				if err = sub.execute(); err == nil {
 					ret = Value{Type: ValueObject, Value: sub.value}
 				}
