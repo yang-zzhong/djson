@@ -27,7 +27,7 @@ func TestMatcherLexer_number(t *testing.T) {
 		{data: "124=\n", val: []byte("124"), typ: TokenNumber},
 	}
 	for i, item := range data {
-		g := NewDjsonMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
@@ -56,7 +56,7 @@ func TestMatcherLexer_string(t *testing.T) {
 		{data: "\"hello \\\"world\nhello\"", val: []byte("hello \\\"world\nhello"), typ: TokenString},
 	}
 	for i, item := range data {
-		g := NewDjsonMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
@@ -73,7 +73,7 @@ func TestMatcherLexer_string(t *testing.T) {
 
 func TestMatcherLexer_range(t *testing.T) {
 	data := "[1 ... 10]"
-	g := NewDjsonMatcherLexer(strings.NewReader(data), 16)
+	g := NewMatcherLexer(strings.NewReader(data), 16)
 	tokens := []*Token{
 		{Type: TokenBracketsOpen},
 		{Type: TokenNumber, Raw: []byte{'1'}},
@@ -107,7 +107,7 @@ func TestMatcherLexer_bool(t *testing.T) {
 		{data: "fals>", typ: TokenIdentifier},
 	}
 	for _, item := range data {
-		g := NewDjsonMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
@@ -185,7 +185,7 @@ data = {
 		{typ: TokenOr, row: 8, col: 15},
 		{typ: TokenFalse, row: 8, col: 18},
 	}
-	g := NewDjsonMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
+	g := NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
 	for i := 0; i < 100; i++ {
 		var token Token
 		if i == 39 {
@@ -216,10 +216,9 @@ data = {
 }.set(k == "string" => v + "_new")
 # hello world
 1 != 2 && true || false`
-	g := NewDjsonMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
 	for i := 0; i < n.N; i++ {
 		var token Token
-		g.ReplaceSource(bytes.NewBuffer([]byte(data)), 128)
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
 		for token.Type != TokenEOF {
 			if err := g.NextToken(&token); err != nil {
 				n.Fatal(err)
