@@ -39,6 +39,7 @@ func (b *buffer) Take(bs []byte) (taked int, err error) {
 	}
 	b.lastTakeSize = copy(bs, b.bs[b.offset:])
 	b.offset += b.lastTakeSize
+	taked = b.lastTakeSize
 	return
 }
 

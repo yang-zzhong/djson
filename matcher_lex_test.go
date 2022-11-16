@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestLexer_number(t *testing.T) {
+func TestMatcherLexer_number(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -26,24 +26,23 @@ func TestLexer_number(t *testing.T) {
 		{data: "124,\n", val: []byte("124"), typ: TokenNumber},
 		{data: "124=\n", val: []byte("124"), typ: TokenNumber},
 	}
-	for _, item := range data {
-		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
-		g.state = stateStart
+	for i, item := range data {
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
 				continue
 			}
-			t.Fatal(err)
+			t.Fatalf("error at %d: %s", i, err.Error())
 		}
 		if token.Type != item.typ || !bytes.Equal(item.val, token.Raw) {
-			t.Fatal("error occurred")
+			t.Fatalf("error occurred at %d", i)
 		}
 		t.Logf("token: %#v\n", token)
 	}
 }
 
-func TestLexer_string(t *testing.T) {
+func TestMatcherLexer_string(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -57,8 +56,7 @@ func TestLexer_string(t *testing.T) {
 		{data: "\"hello \\\"world\nhello\"", val: []byte("hello \\\"world\nhello"), typ: TokenString},
 	}
 	for i, item := range data {
-		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
-		g.state = stateStart
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
@@ -73,9 +71,9 @@ func TestLexer_string(t *testing.T) {
 	}
 }
 
-func TestLexer_range(t *testing.T) {
+func TestMatcherLexer_range(t *testing.T) {
 	data := "[1 ... 10]"
-	g := NewLexer(strings.NewReader(data), 16)
+	g := NewMatcherLexer(strings.NewReader(data), 16)
 	tokens := []*Token{
 		{Type: TokenBracketsOpen},
 		{Type: TokenNumber, Raw: []byte{'1'}},
@@ -94,7 +92,7 @@ func TestLexer_range(t *testing.T) {
 	}
 }
 
-func TestLexer_bool(t *testing.T) {
+func TestMatcherLexer_bool(t *testing.T) {
 	data := []struct {
 		data      string
 		typ       TokenType
@@ -109,8 +107,7 @@ func TestLexer_bool(t *testing.T) {
 		{data: "fals>", typ: TokenIdentifier},
 	}
 	for _, item := range data {
-		g := NewLexer(bytes.NewBuffer([]byte(item.data)), 32)
-		g.state = stateStart
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(item.data)), 32)
 		var token Token
 		if err := g.NextToken(&token); err != nil {
 			if item.shoulderr {
@@ -125,7 +122,7 @@ func TestLexer_bool(t *testing.T) {
 	}
 }
 
-func TestLexer_compose(t *testing.T) {
+func TestMatcherLexer_compose(t *testing.T) {
 	data := `
 data = {
     "string": "123",
@@ -178,22 +175,24 @@ data = {
 		{typ: TokenString, raw: []byte("_new"), row: 6, col: 27},
 		{typ: TokenParenthesesClose, row: 6, col: 33},
 
-		{typ: TokenComment, row: 7, col: 0},
+		{typ: TokenComment, row: 7, col: 0, raw: []byte(" hello world")},
 
-		{typ: TokenNumber, row: 8, col: 0},
+		{typ: TokenNumber, row: 8, col: 0, raw: []byte("1")},
 		{typ: TokenNotEqual, row: 8, col: 2},
-		{typ: TokenNumber, row: 8, col: 5},
+		{typ: TokenNumber, row: 8, col: 5, raw: []byte("2")},
 		{typ: TokenAnd, row: 8, col: 7},
 		{typ: TokenTrue, row: 8, col: 10},
 		{typ: TokenOr, row: 8, col: 15},
 		{typ: TokenFalse, row: 8, col: 18},
 	}
-	g := NewLexer(bytes.NewBuffer([]byte(data)), 128)
-	g.state = stateStart
+	g := NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
 	for i := 0; i < 100; i++ {
 		var token Token
+		if i == 39 {
+			t.Logf("#%d", i)
+		}
 		if err := g.NextToken(&token); err != nil {
-			t.Fatal(err)
+			t.Fatalf("token error at %d: %s", i, err.Error())
 		}
 		if token.Type == TokenEOF {
 			break
@@ -206,7 +205,8 @@ data = {
 		}
 	}
 }
-func BenchmarkLexer_NextToken(n *testing.B) {
+
+func BenchmarkMatcherLexer_NextToken(n *testing.B) {
 	data := `
 data = {
     "string": "123",
@@ -217,7 +217,7 @@ data = {
 # hello world
 1 != 2 && true || false`
 	for i := 0; i < n.N; i++ {
-		g := NewLexer(bytes.NewBuffer([]byte(data)), 128)
+		g := NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
 		var token Token
 		g.NextToken(&token)
 	}
