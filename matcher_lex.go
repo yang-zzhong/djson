@@ -6,18 +6,70 @@ import (
 	"io"
 )
 
+// NOTE this implementation is 5x unefficient than implementation of lex.go because of the using of interface
+// use this implementation carefully
+
 type MatchStatus int
 
 const (
 	Matching = MatchStatus(iota)
-	Matched
+	Match
 	NotMatch
-	MatchedUntilThisTry
+	Matched
 )
 
+type Stash interface {
+	Len() int
+	CopyTo(bs []byte, start int)
+	Append(b byte)
+	Reset()
+}
+
 type TokenMatcher interface {
-	Match(b byte, stashed []byte) MatchStatus
+	Match(b byte, stash Stash) MatchStatus
 	Token() *Token
+}
+
+var staticMatcherStatuses []*tokenMatcherStatus
+
+func init() {
+	staticMatcherStatuses = []*tokenMatcherStatus{
+		{matcher: CharsMatcher([]byte{'{'}, TokenBraceOpen)},
+		{matcher: CharsMatcher([]byte{'}'}, TokenBraceClose)},
+		{matcher: CharsMatcher([]byte{'['}, TokenBracketsOpen)},
+		{matcher: CharsMatcher([]byte{']'}, TokenBracketsClose)},
+		{matcher: CharsMatcher([]byte{'('}, TokenParenthesesOpen)},
+		{matcher: CharsMatcher([]byte{')'}, TokenParenthesesClose)},
+		{matcher: CharsMatcher([]byte{'='}, TokenAssignation)},
+		{matcher: CharsMatcher([]byte{'=', '='}, TokenEqual)},
+		{matcher: CharsMatcher([]byte{'!', '='}, TokenNotEqual)},
+		{matcher: CharsMatcher([]byte{'>'}, TokenGreateThan)},
+		{matcher: CharsMatcher([]byte{'<'}, TokenLessThan)},
+		{matcher: CharsMatcher([]byte{'>', '='}, TokenGreateThanEqual)},
+		{matcher: CharsMatcher([]byte{'<', '='}, TokenLessThanEqual)},
+		{matcher: CharsMatcher([]byte{'|', '|'}, TokenOr)},
+		{matcher: CharsMatcher([]byte{'&', '&'}, TokenAnd)},
+		{matcher: CharsMatcher([]byte{';'}, TokenSemicolon)},
+		{matcher: CharsMatcher([]byte{'+'}, TokenAddition)},
+		{matcher: CharsMatcher([]byte{'-'}, TokenMinus)},
+		{matcher: CharsMatcher([]byte{'*'}, TokenMultiplication)},
+		{matcher: CharsMatcher([]byte{'/'}, TokenDevision)},
+		{matcher: CharsMatcher([]byte{':'}, TokenColon)},
+		{matcher: CharsMatcher([]byte{','}, TokenComma)},
+		{matcher: CharsMatcher([]byte{'.'}, TokenDot)},
+		{matcher: CharsMatcher([]byte{'!'}, TokenExclamation)},
+		{matcher: CharsMatcher([]byte{'n', 'u', 'l', 'l'}, TokenNull)},
+		{matcher: CharsMatcher([]byte{'t', 'r', 'u', 'e'}, TokenTrue)},
+		{matcher: CharsMatcher([]byte{'f', 'a', 'l', 's', 'e'}, TokenFalse)},
+		{matcher: CharsMatcher([]byte{'=', '>'}, TokenReduction)},
+		{matcher: CharsMatcher([]byte{'.', '.', '.'}, TokenRange)},
+		{matcher: IdentifierMatcher()},
+		{matcher: WhitespaceMatcher()},
+		{matcher: CommentMatcher()},
+		{matcher: StringMatcher()},
+		{matcher: NumberMatcher()},
+		{matcher: EOFMatcher()},
+	}
 }
 
 type charsMatcher struct {
@@ -29,10 +81,10 @@ func CharsMatcher(chars []byte, tokenType TokenType) TokenMatcher {
 	return &charsMatcher{chars: chars, token: Token{Type: tokenType}}
 }
 
-func (m *charsMatcher) Match(b byte, stash []byte) MatchStatus {
-	sl := len(stash)
+func (m *charsMatcher) Match(b byte, stash Stash) MatchStatus {
+	sl := stash.Len()
 	if sl == len(m.chars) {
-		return MatchedUntilThisTry
+		return Matched
 	}
 	if m.chars[sl] == b {
 		return Matching
@@ -52,14 +104,14 @@ func IdentifierMatcher() TokenMatcher {
 	return &identifierMatcher{token: Token{Type: TokenIdentifier}}
 }
 
-func (m *identifierMatcher) Match(b byte, stashed []byte) MatchStatus {
-	sl := len(stashed)
+func (m *identifierMatcher) Match(b byte, stash Stash) MatchStatus {
+	sl := stash.Len()
 	if sl == 0 && (isAlpha(b) || b == '_') || sl > 0 && isVarChar(b) {
 		return Matching
 	} else if sl > 0 && !isVarChar(b) {
 		m.token.Raw = make([]byte, sl)
-		copy(m.token.Raw, stashed)
-		return MatchedUntilThisTry
+		stash.CopyTo(m.token.Raw, 0)
+		return Matched
 	}
 	return NotMatch
 }
@@ -77,13 +129,12 @@ func WhitespaceMatcher() TokenMatcher {
 	return &whitespaceMatcher{Token{Type: TokenWhitespace}}
 }
 
-func (m *whitespaceMatcher) Match(b byte, stashed []byte) MatchStatus {
+func (m *whitespaceMatcher) Match(b byte, stash Stash) MatchStatus {
 	if isWhitespace(b) {
 		return Matching
 	}
-	sl := len(stashed)
-	if sl > 0 {
-		return MatchedUntilThisTry
+	if stash.Len() > 0 {
+		return Matched
 	}
 	return NotMatch
 }
@@ -100,15 +151,15 @@ func NumberMatcher() TokenMatcher {
 	return &numberMatcher{Token{Type: TokenNumber}}
 }
 
-func (m *numberMatcher) Match(b byte, stashed []byte) MatchStatus {
-	sl := len(stashed)
+func (m *numberMatcher) Match(b byte, stash Stash) MatchStatus {
+	sl := stash.Len()
 	if isNumber(b) || sl > 0 && b == '.' {
 		return Matching
 	}
 	if sl > 0 && !isAlpha(b) && b != '_' {
 		m.token.Raw = make([]byte, sl)
-		copy(m.token.Raw, stashed)
-		return MatchedUntilThisTry
+		stash.CopyTo(m.token.Raw, 0)
+		return Matched
 	}
 	return NotMatch
 }
@@ -126,8 +177,8 @@ func StringMatcher() TokenMatcher {
 	return &stringMatcher{token: Token{Type: TokenString}}
 }
 
-func (m *stringMatcher) Match(b byte, stashed []byte) MatchStatus {
-	sl := len(stashed)
+func (m *stringMatcher) Match(b byte, stash Stash) MatchStatus {
+	sl := stash.Len()
 	if sl == 0 && b != '"' || b == 0 {
 		return NotMatch
 	}
@@ -136,9 +187,9 @@ func (m *stringMatcher) Match(b byte, stashed []byte) MatchStatus {
 		return Matching
 	}
 	if sl > 0 && !m.slashed && b == '"' {
-		m.token.Raw = make([]byte, len(stashed)-1)
-		copy(m.token.Raw, stashed[1:])
-		return Matched
+		m.token.Raw = make([]byte, sl-1)
+		stash.CopyTo(m.token.Raw, 1)
+		return Match
 	}
 	m.slashed = false
 	return Matching
@@ -156,11 +207,11 @@ func EOFMatcher() TokenMatcher {
 	return &eofMatcher{token: Token{Type: TokenEOF}}
 }
 
-func (m *eofMatcher) Match(b byte, stashed []byte) MatchStatus {
+func (m *eofMatcher) Match(b byte, stash Stash) MatchStatus {
 	if b != 0 {
 		return NotMatch
 	}
-	return Matched
+	return Match
 }
 
 func (m *eofMatcher) Token() *Token {
@@ -175,15 +226,15 @@ func CommentMatcher() TokenMatcher {
 	return &commentMatcher{Token{Type: TokenComment}}
 }
 
-func (m *commentMatcher) Match(b byte, stashed []byte) MatchStatus {
-	sl := len(stashed)
+func (m *commentMatcher) Match(b byte, stash Stash) MatchStatus {
+	sl := stash.Len()
 	if sl == 0 && b != '#' {
 		return NotMatch
 	}
 	if sl > 0 && b == '\n' {
 		m.token.Raw = make([]byte, sl-1)
-		copy(m.token.Raw, stashed[1:])
-		return MatchedUntilThisTry
+		stash.CopyTo(m.token.Raw, 1)
+		return Matched
 	}
 	return Matching
 }
@@ -197,35 +248,61 @@ type tokenMatcherStatus struct {
 	excloded bool
 }
 
-type matcherLexer struct {
-	matchers               []*tokenMatcherStatus
-	buf                    Buffer
-	bs                     []byte
-	stash                  []byte
-	row, col               int
-	tokenAtCol, tokenAtRow int
+type stash struct {
+	offset int
+	buf    []byte
 }
 
-func NewMatcherLexer(source io.Reader, bufSize uint) Lexer {
-	matchers := append(
-		CharsMatchers,
-		IdentifierMatcher(),
-		WhitespaceMatcher(),
-		CommentMatcher(),
-		StringMatcher(),
-		NumberMatcher(),
-		EOFMatcher())
-	return &matcherLexer{
-		matchers: func() []*tokenMatcherStatus {
-			ret := make([]*tokenMatcherStatus, len(matchers))
-			for i, m := range matchers {
-				ret[i] = &tokenMatcherStatus{matcher: m}
-			}
-			return ret
-		}(),
-		buf: NewBuffer(source, int(bufSize)),
-		bs:  make([]byte, 1),
+func NewStash(size int) Stash {
+	return &stash{
+		buf: make([]byte, size),
 	}
+}
+
+func (s *stash) Append(b byte) {
+	if len(s.buf) <= s.offset {
+		stash := make([]byte, len(s.buf)*2)
+		copy(stash, s.buf)
+		s.buf = stash
+	}
+	s.buf[s.offset] = b
+	s.offset++
+}
+
+func (s *stash) Reset() {
+	s.offset = 0
+}
+
+func (s *stash) Len() int {
+	return s.offset
+}
+
+func (s *stash) CopyTo(bs []byte, start int) {
+	copy(bs, s.buf[start:])
+}
+
+type matcherLexer struct {
+	matcherStatuses        []*tokenMatcherStatus
+	buf                    Buffer
+	bs                     []byte
+	stash                  Stash
+	row, col               int
+	tokenAtCol, tokenAtRow int
+	includeMatchers        int
+}
+
+func NewMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
+	return &matcherLexer{
+		buf:   NewBuffer(source, int(bufSize)),
+		bs:    make([]byte, 1),
+		stash: NewStash(stashSize),
+	}
+}
+
+func NewDjsonMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
+	lexer := NewMatcherLexer(source, bufSize)
+	lexer.matcherStatuses = staticMatcherStatuses
+	return lexer
 }
 
 type candidate struct {
@@ -259,12 +336,36 @@ func (cs *candidates) del(token *Token) {
 	}
 }
 
+func (g *matcherLexer) ReplaceMatchers(matchers ...TokenMatcher) {
+	g.matcherStatuses = func() []*tokenMatcherStatus {
+		ret := make([]*tokenMatcherStatus, len(matchers))
+		for i, m := range matchers {
+			ret[i] = &tokenMatcherStatus{matcher: m}
+		}
+		return ret
+	}()
+}
+
+func (g *matcherLexer) RegisterMatcher(matchers ...TokenMatcher) {
+	g.matcherStatuses = append(g.matcherStatuses, func() []*tokenMatcherStatus {
+		ret := make([]*tokenMatcherStatus, len(matchers))
+		for i, m := range matchers {
+			ret[i] = &tokenMatcherStatus{matcher: m}
+		}
+		return ret
+	}()...)
+}
+
+func (g *matcherLexer) ReplaceSource(source io.Reader, bufSize int) {
+	g.buf = NewBuffer(source, bufSize)
+}
+
 func (g *matcherLexer) NextToken(token *Token) error {
 nextToken:
 	g.tokenAtCol = g.col
 	g.tokenAtRow = g.row
 	var cs candidates
-	g.stash = []byte{}
+	g.stash.Reset()
 	g.initMatchers()
 	for {
 		if g.noAvailableMatchers() {
@@ -276,27 +377,9 @@ nextToken:
 			}
 			g.bs[0] = 0
 		}
-		newc := []candidate{}
-		for i := 0; i < len(g.matchers); i++ {
-			m := g.matchers[i].matcher
-			if g.matchers[i].excloded {
-				continue
-			}
-			switch m.Match(g.bs[0], g.stash) {
-			case NotMatch:
-				cs.del(m.Token())
-				g.excludeMatcher(i)
-			case MatchedUntilThisTry:
-				newc = append(newc, candidate{token: m.Token(), dropLastChar: true})
-				g.excludeMatcher(i)
-			case Matched:
-				newc = append(newc, candidate{token: m.Token()})
-				g.excludeMatcher(i)
-			case Matching:
-				newc = append(newc, candidate{token: m.Token()})
-			}
-		}
-		g.stash = append(g.stash, g.bs...)
+		var newc []candidate
+		g.match(&cs, &newc)
+		g.stash.Append(g.bs[0])
 		if len(newc) > 0 {
 			g.forwardChar(g.bs[0])
 			cs = newc
@@ -322,6 +405,28 @@ nextToken:
 	return nil
 }
 
+func (g *matcherLexer) match(cs *candidates, newc *[]candidate) {
+	for i := 0; i < len(g.matcherStatuses); i++ {
+		if g.matcherStatuses[i].excloded {
+			continue
+		}
+		m := g.matcherStatuses[i].matcher
+		switch m.Match(g.bs[0], g.stash) {
+		case NotMatch:
+			cs.del(m.Token())
+			g.excludeMatcher(i)
+		case Matched:
+			*newc = append(*newc, candidate{token: m.Token(), dropLastChar: true})
+			g.excludeMatcher(i)
+		case Match:
+			*newc = append(*newc, candidate{token: m.Token()})
+			g.excludeMatcher(i)
+		case Matching:
+			*newc = append(*newc, candidate{token: m.Token()})
+		}
+	}
+}
+
 func (g *matcherLexer) forwardChar(b byte) {
 	if b == '\n' {
 		g.row++
@@ -332,12 +437,7 @@ func (g *matcherLexer) forwardChar(b byte) {
 }
 
 func (g *matcherLexer) noAvailableMatchers() bool {
-	for _, m := range g.matchers {
-		if m.excloded == false {
-			return false
-		}
-	}
-	return true
+	return g.includeMatchers == 0
 }
 
 func (g *matcherLexer) backwardChar(b byte) {
@@ -350,13 +450,15 @@ func (g *matcherLexer) backwardChar(b byte) {
 }
 
 func (g *matcherLexer) initMatchers() {
-	for _, m := range g.matchers {
+	for _, m := range g.matcherStatuses {
 		m.excloded = false
 	}
+	g.includeMatchers = len(g.matcherStatuses)
 }
 
 func (g *matcherLexer) excludeMatcher(i int) {
-	g.matchers[i].excloded = true
+	g.matcherStatuses[i].excloded = true
+	g.includeMatchers--
 }
 
 func isWhitespace(b byte) bool {

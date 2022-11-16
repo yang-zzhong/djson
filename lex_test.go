@@ -219,6 +219,10 @@ data = {
 	for i := 0; i < n.N; i++ {
 		g := NewLexer(bytes.NewBuffer([]byte(data)), 128)
 		var token Token
-		g.NextToken(&token)
+		for token.Type != TokenEOF {
+			if err := g.NextToken(&token); err != nil {
+				n.Fatal(err)
+			}
+		}
 	}
 }

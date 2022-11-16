@@ -45,6 +45,10 @@ const (
 	stashSize = 256
 )
 
+type ReplaceSourcer interface {
+	ReplaceSource(r io.Reader, bufSize int)
+}
+
 type Lexer interface {
 	NextToken(token *Token) error
 }
@@ -72,6 +76,10 @@ func NewLexer(source io.Reader, bufSize uint) *lexer_ {
 		state: stateStart,
 		stash: make([]byte, stashSize),
 	}
+}
+
+func (g *lexer_) ReplaceSource(source io.Reader, bufSize int) {
+	g.buf = NewBuffer(source, bufSize)
 }
 
 func (g *lexer_) NextToken(token *Token) (err error) {
