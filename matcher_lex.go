@@ -73,8 +73,7 @@ func (m *identifierMatcher) Match(b byte, stash Stash) MatchStatus {
 }
 
 func (m *identifierMatcher) Token() *Token {
-	ret := m.token
-	return &ret
+	return &m.token
 }
 
 type whitespaceMatcher struct {
@@ -250,7 +249,7 @@ type matcherLexer struct {
 }
 
 func NewMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
-	return &matcherLexer{
+	lexer := &matcherLexer{
 		buf:   NewBuffer(source, int(bufSize)),
 		bs:    make([]byte, 1),
 		stash: NewStash(stashSize),
@@ -291,8 +290,9 @@ func NewMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
 		stringMatcher:     StringMatcher(),
 		numberMatcher:     NumberMatcher(),
 		eofMatcher:        EOFMatcher(),
-		tokenStatus:       make(map[TokenType]bool),
 	}
+	lexer.tokenStatus = make(map[TokenType]bool, len(lexer.charsMatchers)+6)
+	return lexer
 }
 
 type candidate struct {
