@@ -555,3 +555,41 @@ func (g *lexer_) isUpperCaseAlpha(b byte) bool {
 func (g *lexer_) isNumber(b byte) bool {
 	return b >= '0' && b <= '9'
 }
+
+func exclodeRawToken(tokenType TokenType) bool {
+	tokens := []TokenType{
+		TokenBraceOpen,
+		TokenBraceClose,
+		TokenBracketsOpen,
+		TokenBracketsClose,
+		TokenParenthesesOpen,
+		TokenParenthesesClose,
+		TokenAssignation,
+		TokenEqual,
+		TokenGreateThan,
+		TokenLessThan,
+		TokenGreateThanEqual,
+		TokenLessThanEqual,
+		TokenOr,
+		TokenAnd,
+		TokenAddition,
+		TokenMinus,
+		TokenMultiplication,
+		TokenDevision,
+		TokenDot,
+		TokenEOF,
+		TokenNull,
+		TokenTrue,
+		TokenFalse,
+		TokenColon,
+		TokenComma,
+		TokenReduction,
+		TokenSemicolon,
+	}
+	for _, t := range tokens {
+		if t == tokenType {
+			return true
+		}
+	}
+	return false
+}

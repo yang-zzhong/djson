@@ -1,5 +1,54 @@
 package djson
 
+type tokens struct {
+	tokens []*Token
+	total  int
+}
+
+type endsWhen struct {
+	total int
+	when  []TokenType
+}
+
+func newEndsWhen() *endsWhen {
+	return &endsWhen{
+		when: make([]TokenType, 16),
+	}
+}
+
+func (ew *endsWhen) push(tt ...TokenType) {
+	l := len(ew.when)
+	if l <= ew.total {
+		tmp := make([]TokenType, l*2)
+		copy(tmp, ew.when)
+		ew.when = tmp
+	}
+	for i, t := range tt {
+		ew.when[ew.total+i] = t
+	}
+	ew.total += len(tt)
+}
+
+func (ew *endsWhen) pop(n int) {
+	ew.total -= n
+	if ew.total < 0 {
+		ew.total = 0
+	}
+}
+
+func (ew *endsWhen) ended(t TokenType) bool {
+	for i := 0; i < ew.total; i++ {
+		if ew.when[i] == t {
+			return true
+		}
+	}
+	return false
+}
+
+func (ew *endsWhen) reset() {
+	ew.total = 0
+}
+
 type TokenScanner interface {
 	Forward()
 	PushEnds(...TokenType)
@@ -16,7 +65,7 @@ type tokenScanner struct {
 	tokens     []*Token
 	readOffset int
 	token      *Token
-	endsWhen   []TokenType
+	endsWhen   *endsWhen
 }
 
 var _ TokenScanner = &tokenScanner{}
@@ -25,7 +74,7 @@ func NewTokenScanner(l Lexer, ends ...TokenType) *tokenScanner {
 	n := &tokenScanner{
 		lexer:    l,
 		token:    &Token{},
-		endsWhen: ends,
+		endsWhen: newEndsWhen(),
 	}
 	return n
 }
@@ -39,11 +88,11 @@ func (ts *tokenScanner) Token() *Token {
 }
 
 func (t *tokenScanner) PushEnds(tt ...TokenType) {
-	t.endsWhen = append(t.endsWhen, tt...)
+	t.endsWhen.push(tt...)
 }
 
 func (t *tokenScanner) PopEnds(count int) {
-	t.endsWhen = t.endsWhen[:len(t.endsWhen)-count]
+	t.endsWhen.pop(count)
 }
 
 func (t *tokenScanner) Offset() int {
@@ -79,12 +128,7 @@ func (t *tokenScanner) Scan() (end bool, err error) {
 		end = true
 		return
 	}
-	for _, e := range t.endsWhen {
-		if e == t.token.Type {
-			end = true
-			return
-		}
-	}
+	end = t.endsWhen.ended(t.token.Type)
 	return
 }
 
