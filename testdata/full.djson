@@ -1,0 +1,137 @@
+# this is a file for test and benchmark either
+# we give an example for real world user case
+
+
+# this is a header template
+header = {
+  "type": "h3",
+  "innerText": ""
+};
+
+# this is input template
+input = {
+  "type": "textfield",
+  "label": "用户名",
+  "required": true,
+  "valType": "text",
+  "outlined": true,
+  "name": "name",
+  "marginRight": "10px",
+  "valType": "text"
+};
+
+
+# this is row template
+row = {
+  "type": "row",
+  "margin": "10px 0px",
+  "justifyContent": "space-between"
+};
+
+# this is regions
+regions = [{
+  "value": "ap-beijing",
+  "label": "北京"
+}, {
+  "value": "ap-shanghai",
+  "label": "上海"
+}, {
+  "value": "ap-chongqing",
+  "label": "重庆"
+}, {
+  "value": "ap-shenzhen",
+  "label": "深圳"
+}, {
+  "value": "ap-guangzhou",
+  "label": "广州"
+}];
+
+
+# this is availability zones
+azs = [
+  {
+    "value": "ap-beijing-1",
+    "label": "北京一区",
+    "depends": ["region:ap-beijing"]
+  },
+  {
+    "value": "ap-shanghai-1",
+    "label": "上海一区",
+    "depends": ["region:ap-shanghai"]
+  },
+  {
+    "value": "ap-chongqing-1",
+    "label": "重庆一区",
+    "depends": ["region:ap-chongqing"]
+  },
+  {
+    "value": "ap-global-1",
+    "label": "通用一区"
+  },
+  {
+    "value": "ap-global-2",
+    "label": "通用二区"
+  }
+];
+
+# output
+{
+  "type": "col",
+  "children": [
+    # set header name
+    header.set(k == "innerText" => "用户信息"),
+    {
+      "type": "row",
+      "margin": "10px 0px",
+      "children": [
+        input + {"label": "用户名", "name": "name"}, 
+        input + {"label": "昵称", "name": "nickname"}
+      ]
+   }, {
+     "type": "row",
+     "margin": "10px 0px",
+     "children": [
+        input + {"valType": "password", "label": "密码", "name": "password"},
+        input + {"valType": "password", "label": "重复密码", "name": "repassword"}
+     ]
+  }, 
+  # set header name
+  header.set(k == "innerText" => "其他信息"),
+  row + {
+    "children": [{
+      "type": "row",
+      "width": "100%",
+      "children": [{
+        "type": "switch",
+        "label": "自动映射安全组",
+        "name": "hello",
+        "value": true,
+      }]
+    }]
+  },
+  row + {
+    "children": [{
+      "type": "row",
+      "width": "100%",
+      "children": [{
+        "type": "select",
+        "label": "选择地域",
+        "name": "region",
+        "multiple": false,
+        "width": "200px",
+        "marginRight": "10px",
+        "value": "-",
+        "options": regions
+      }, {
+        "type": "select",
+        "label": "选择可用区",
+        "name": "az",
+        "multiple": false,
+        "width": "200px",
+        "value": "-",
+        "options": azs
+      }]
+    }]
+  }]     
+};
+

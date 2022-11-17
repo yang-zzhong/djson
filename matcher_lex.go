@@ -28,12 +28,54 @@ type TokenMatcher interface {
 	Token() *Token
 }
 
+var staticMatcherStatuses []*tokenMatcherStatus
+
+func init() {
+	staticMatcherStatuses = []*tokenMatcherStatus{
+		{matcher: CharsMatcher([]byte{'{'}, TokenBraceOpen)},
+		{matcher: CharsMatcher([]byte{'}'}, TokenBraceClose)},
+		{matcher: CharsMatcher([]byte{'['}, TokenBracketsOpen)},
+		{matcher: CharsMatcher([]byte{']'}, TokenBracketsClose)},
+		{matcher: CharsMatcher([]byte{'('}, TokenParenthesesOpen)},
+		{matcher: CharsMatcher([]byte{')'}, TokenParenthesesClose)},
+		{matcher: CharsMatcher([]byte{'='}, TokenAssignation)},
+		{matcher: CharsMatcher([]byte{'=', '='}, TokenEqual)},
+		{matcher: CharsMatcher([]byte{'!', '='}, TokenNotEqual)},
+		{matcher: CharsMatcher([]byte{'>'}, TokenGreateThan)},
+		{matcher: CharsMatcher([]byte{'<'}, TokenLessThan)},
+		{matcher: CharsMatcher([]byte{'>', '='}, TokenGreateThanEqual)},
+		{matcher: CharsMatcher([]byte{'<', '='}, TokenLessThanEqual)},
+		{matcher: CharsMatcher([]byte{'|', '|'}, TokenOr)},
+		{matcher: CharsMatcher([]byte{'&', '&'}, TokenAnd)},
+		{matcher: CharsMatcher([]byte{';'}, TokenSemicolon)},
+		{matcher: CharsMatcher([]byte{'+'}, TokenAddition)},
+		{matcher: CharsMatcher([]byte{'-'}, TokenMinus)},
+		{matcher: CharsMatcher([]byte{'*'}, TokenMultiplication)},
+		{matcher: CharsMatcher([]byte{'/'}, TokenDevision)},
+		{matcher: CharsMatcher([]byte{':'}, TokenColon)},
+		{matcher: CharsMatcher([]byte{','}, TokenComma)},
+		{matcher: CharsMatcher([]byte{'.'}, TokenDot)},
+		{matcher: CharsMatcher([]byte{'!'}, TokenExclamation)},
+		{matcher: CharsMatcher([]byte{'n', 'u', 'l', 'l'}, TokenNull)},
+		{matcher: CharsMatcher([]byte{'t', 'r', 'u', 'e'}, TokenTrue)},
+		{matcher: CharsMatcher([]byte{'f', 'a', 'l', 's', 'e'}, TokenFalse)},
+		{matcher: CharsMatcher([]byte{'=', '>'}, TokenReduction)},
+		{matcher: CharsMatcher([]byte{'.', '.', '.'}, TokenRange)},
+		{matcher: IdentifierMatcher()},
+		{matcher: WhitespaceMatcher()},
+		{matcher: CommentMatcher()},
+		{matcher: StringMatcher()},
+		{matcher: NumberMatcher()},
+		{matcher: EOFMatcher()},
+	}
+}
+
 type charsMatcher struct {
 	chars []byte
 	token Token
 }
 
-func CharsMatcher(chars []byte, tokenType TokenType) *charsMatcher {
+func CharsMatcher(chars []byte, tokenType TokenType) TokenMatcher {
 	return &charsMatcher{chars: chars, token: Token{Type: tokenType}}
 }
 
@@ -56,7 +98,7 @@ type identifierMatcher struct {
 	token Token
 }
 
-func IdentifierMatcher() *identifierMatcher {
+func IdentifierMatcher() TokenMatcher {
 	return &identifierMatcher{token: Token{Type: TokenIdentifier}}
 }
 
@@ -80,7 +122,7 @@ type whitespaceMatcher struct {
 	token Token
 }
 
-func WhitespaceMatcher() *whitespaceMatcher {
+func WhitespaceMatcher() TokenMatcher {
 	return &whitespaceMatcher{Token{Type: TokenWhitespace}}
 }
 
@@ -102,7 +144,7 @@ type numberMatcher struct {
 	token Token
 }
 
-func NumberMatcher() *numberMatcher {
+func NumberMatcher() TokenMatcher {
 	return &numberMatcher{Token{Type: TokenNumber}}
 }
 
@@ -128,7 +170,7 @@ type stringMatcher struct {
 	slashed bool
 }
 
-func StringMatcher() *stringMatcher {
+func StringMatcher() TokenMatcher {
 	return &stringMatcher{token: Token{Type: TokenString}}
 }
 
@@ -158,7 +200,7 @@ type eofMatcher struct {
 	token Token
 }
 
-func EOFMatcher() *eofMatcher {
+func EOFMatcher() TokenMatcher {
 	return &eofMatcher{token: Token{Type: TokenEOF}}
 }
 
@@ -177,7 +219,7 @@ type commentMatcher struct {
 	token Token
 }
 
-func CommentMatcher() *commentMatcher {
+func CommentMatcher() TokenMatcher {
 	return &commentMatcher{Token{Type: TokenComment}}
 }
 
@@ -198,12 +240,17 @@ func (m *commentMatcher) Token() *Token {
 	return &m.token
 }
 
+type tokenMatcherStatus struct {
+	matcher  TokenMatcher
+	excloded bool
+}
+
 type stash struct {
 	offset int
 	buf    []byte
 }
 
-func NewStash(size int) *stash {
+func newStash(size int) *stash {
 	return &stash{
 		buf: make([]byte, size),
 	}
@@ -232,14 +279,7 @@ func (s *stash) CopyTo(bs []byte, start int) {
 }
 
 type matcherLexer struct {
-	charsMatchers          []*charsMatcher
-	identifierMatcher      *identifierMatcher
-	commentMatcher         *commentMatcher
-	stringMatcher          *stringMatcher
-	numberMatcher          *numberMatcher
-	eofMatcher             *eofMatcher
-	whitespaceMatcher      *whitespaceMatcher
-	tokenStatus            map[TokenType]bool
+	matcherStatuses        []*tokenMatcherStatus
 	buf                    Buffer
 	bs                     []byte
 	stash                  *stash
@@ -249,50 +289,12 @@ type matcherLexer struct {
 }
 
 func NewMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
-	lexer := &matcherLexer{
-		buf:   NewBuffer(source, int(bufSize)),
-		bs:    make([]byte, 1),
-		stash: NewStash(stashSize),
-		charsMatchers: []*charsMatcher{
-			CharsMatcher([]byte{'{'}, TokenBraceOpen),
-			CharsMatcher([]byte{'}'}, TokenBraceClose),
-			CharsMatcher([]byte{'['}, TokenBracketsOpen),
-			CharsMatcher([]byte{']'}, TokenBracketsClose),
-			CharsMatcher([]byte{'('}, TokenParenthesesOpen),
-			CharsMatcher([]byte{')'}, TokenParenthesesClose),
-			CharsMatcher([]byte{'='}, TokenAssignation),
-			CharsMatcher([]byte{'=', '='}, TokenEqual),
-			CharsMatcher([]byte{'!', '='}, TokenNotEqual),
-			CharsMatcher([]byte{'>'}, TokenGreateThan),
-			CharsMatcher([]byte{'<'}, TokenLessThan),
-			CharsMatcher([]byte{'>', '='}, TokenGreateThanEqual),
-			CharsMatcher([]byte{'<', '='}, TokenLessThanEqual),
-			CharsMatcher([]byte{'|', '|'}, TokenOr),
-			CharsMatcher([]byte{'&', '&'}, TokenAnd),
-			CharsMatcher([]byte{';'}, TokenSemicolon),
-			CharsMatcher([]byte{'+'}, TokenAddition),
-			CharsMatcher([]byte{'-'}, TokenMinus),
-			CharsMatcher([]byte{'*'}, TokenMultiplication),
-			CharsMatcher([]byte{'/'}, TokenDevision),
-			CharsMatcher([]byte{':'}, TokenColon),
-			CharsMatcher([]byte{','}, TokenComma),
-			CharsMatcher([]byte{'.'}, TokenDot),
-			CharsMatcher([]byte{'!'}, TokenExclamation),
-			CharsMatcher([]byte{'n', 'u', 'l', 'l'}, TokenNull),
-			CharsMatcher([]byte{'t', 'r', 'u', 'e'}, TokenTrue),
-			CharsMatcher([]byte{'f', 'a', 'l', 's', 'e'}, TokenFalse),
-			CharsMatcher([]byte{'=', '>'}, TokenReduction),
-			CharsMatcher([]byte{'.', '.', '.'}, TokenRange),
-		},
-		identifierMatcher: IdentifierMatcher(),
-		whitespaceMatcher: WhitespaceMatcher(),
-		commentMatcher:    CommentMatcher(),
-		stringMatcher:     StringMatcher(),
-		numberMatcher:     NumberMatcher(),
-		eofMatcher:        EOFMatcher(),
+	return &matcherLexer{
+		buf:             NewBuffer(source, int(bufSize)),
+		bs:              make([]byte, 1),
+		stash:           newStash(stashSize),
+		matcherStatuses: staticMatcherStatuses,
 	}
-	lexer.tokenStatus = make(map[TokenType]bool, len(lexer.charsMatchers)+6)
-	return lexer
 }
 
 type candidate struct {
@@ -324,6 +326,26 @@ func (cs *candidates) del(token *Token) {
 		*cs = append((*cs)[:i], (*cs)[i+1:]...)
 		return
 	}
+}
+
+func (g *matcherLexer) ReplaceMatchers(matchers ...TokenMatcher) {
+	g.matcherStatuses = func() []*tokenMatcherStatus {
+		ret := make([]*tokenMatcherStatus, len(matchers))
+		for i, m := range matchers {
+			ret[i] = &tokenMatcherStatus{matcher: m}
+		}
+		return ret
+	}()
+}
+
+func (g *matcherLexer) RegisterMatcher(matchers ...TokenMatcher) {
+	g.matcherStatuses = append(g.matcherStatuses, func() []*tokenMatcherStatus {
+		ret := make([]*tokenMatcherStatus, len(matchers))
+		for i, m := range matchers {
+			ret[i] = &tokenMatcherStatus{matcher: m}
+		}
+		return ret
+	}()...)
 }
 
 func (g *matcherLexer) ReplaceSource(source io.Reader, bufSize int) {
@@ -376,46 +398,24 @@ nextToken:
 }
 
 func (g *matcherLexer) match(cs *candidates, newc *[]candidate) {
-	mth := func(match func(byte, Stash) MatchStatus, getToken func() *Token) {
-		s := match(g.bs[0], g.stash)
-		token := getToken()
-		switch s {
-		case NotMatch:
-			cs.del(token)
-			g.excludeMatcher(token.Type)
-		case Matched:
-			*newc = append(*newc, candidate{token: token, dropLastChar: true})
-			g.excludeMatcher(token.Type)
-		case Match:
-			*newc = append(*newc, candidate{token: token})
-			g.excludeMatcher(token.Type)
-		case Matching:
-			*newc = append(*newc, candidate{token: token})
-		}
-	}
-	for _, m := range g.charsMatchers {
-		if g.tokenStatus[m.Token().Type] {
+	for i := 0; i < len(g.matcherStatuses); i++ {
+		if g.matcherStatuses[i].excloded {
 			continue
 		}
-		mth(m.Match, m.Token)
-	}
-	if !g.tokenStatus[TokenIdentifier] {
-		mth(g.identifierMatcher.Match, g.identifierMatcher.Token)
-	}
-	if !g.tokenStatus[TokenNumber] {
-		mth(g.numberMatcher.Match, g.numberMatcher.Token)
-	}
-	if !g.tokenStatus[TokenComment] {
-		mth(g.commentMatcher.Match, g.commentMatcher.Token)
-	}
-	if !g.tokenStatus[TokenString] {
-		mth(g.stringMatcher.Match, g.stringMatcher.Token)
-	}
-	if !g.tokenStatus[TokenEOF] {
-		mth(g.eofMatcher.Match, g.eofMatcher.Token)
-	}
-	if !g.tokenStatus[TokenWhitespace] {
-		mth(g.whitespaceMatcher.Match, g.whitespaceMatcher.Token)
+		m := g.matcherStatuses[i].matcher
+		switch m.Match(g.bs[0], g.stash) {
+		case NotMatch:
+			cs.del(m.Token())
+			g.excludeMatcher(i)
+		case Matched:
+			*newc = append(*newc, candidate{token: m.Token(), dropLastChar: true})
+			g.excludeMatcher(i)
+		case Match:
+			*newc = append(*newc, candidate{token: m.Token()})
+			g.excludeMatcher(i)
+		case Matching:
+			*newc = append(*newc, candidate{token: m.Token()})
+		}
 	}
 }
 
@@ -442,20 +442,14 @@ func (g *matcherLexer) backwardChar(b byte) {
 }
 
 func (g *matcherLexer) initMatchers() {
-	for _, m := range g.charsMatchers {
-		g.tokenStatus[m.Token().Type] = false
+	for _, m := range g.matcherStatuses {
+		m.excloded = false
 	}
-	g.tokenStatus[TokenIdentifier] = false
-	g.tokenStatus[TokenNumber] = false
-	g.tokenStatus[TokenString] = false
-	g.tokenStatus[TokenEOF] = false
-	g.tokenStatus[TokenWhitespace] = false
-	g.tokenStatus[TokenComment] = false
-	g.includeMatchers = len(g.charsMatchers) + 6
+	g.includeMatchers = len(g.matcherStatuses)
 }
 
-func (g *matcherLexer) excludeMatcher(tt TokenType) {
-	g.tokenStatus[tt] = true
+func (g *matcherLexer) excludeMatcher(i int) {
+	g.matcherStatuses[i].excloded = true
 	g.includeMatchers--
 }
 

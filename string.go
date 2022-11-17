@@ -8,6 +8,7 @@ import (
 
 type String interface {
 	Literal() []byte
+	Copy() String
 }
 
 type str struct {
@@ -27,6 +28,10 @@ func NewString(bs ...byte) *str {
 
 func (s *str) Literal() []byte {
 	return s.bytes
+}
+
+func (s *str) Copy() String {
+	return NewString(s.bytes...)
 }
 
 func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {

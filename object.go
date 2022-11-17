@@ -3,6 +3,7 @@ package djson
 import (
 	"bytes"
 	"errors"
+	"fmt"
 )
 
 type Object interface {
@@ -25,9 +26,17 @@ type pair struct {
 	val Value
 }
 
+func (p *pair) copy() *pair {
+	r := &pair{}
+	r.key = make([]byte, len(p.key))
+	copy(r.key, p.key)
+	r.val = p.val.copy()
+	return r
+}
+
 var _ Object = &object{}
 
-func NewObject(pairs ...*pair) Object {
+func NewObject(pairs ...*pair) *object {
 	obj := &object{pairs: pairs, callableImp: newCallable("object")}
 	obj.register("set", setObject)
 	obj.register("replace", replaceObject)
@@ -169,7 +178,12 @@ func objectDel(obj Object, val Value) Object {
 }
 
 func (obj *object) Copy() Object {
-	return NewObject(obj.pairs...)
+	r := NewObject()
+	r.pairs = make([]*pair, len(obj.pairs))
+	for i, p := range obj.pairs {
+		r.pairs[i] = p.copy()
+	}
+	return r
 }
 
 func (obj *object) Get(k []byte) Value {
@@ -245,14 +259,15 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 		func() {
 			e.scanner.PushEnds(TokenColon)
 			defer e.scanner.PopEnds(1)
-			if err = expr.Execute(); err != nil {
-				return
-			}
-			if expr.value.Type != ValueString {
-				err = errors.New("object key must be string")
-				return
-			}
+			err = expr.Execute()
 		}()
+		if err != nil || expr.value.Type == ValueNull {
+			return
+		}
+		if expr.value.Type != ValueString {
+			err = fmt.Errorf("object key [%v] must be string", expr.value.Value)
+			return
+		}
 		key := expr.value.Value.(String).Literal()
 		func() {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
@@ -262,6 +277,9 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 				return
 			}
 		}()
+		if err != nil {
+			return
+		}
 		val.Set(key, expr.value)
 		if e.scanner.EndAt() == TokenBraceClose {
 			return

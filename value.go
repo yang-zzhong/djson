@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+type Stringer interface {
+	String() string
+}
+
 type ValueType int
 
 const (
@@ -42,6 +46,20 @@ type Value struct {
 	Value interface{}
 	Type  ValueType
 	p     *Value
+}
+
+func (val Value) copy() Value {
+	switch val.Type {
+	case ValueFloat, ValueInt, ValueBool, ValueNull:
+		return Value{Type: val.Type, Value: val.Value}
+	case ValueString:
+		return Value{Type: ValueString, Value: val.Value.(String).Copy()}
+	case ValueObject:
+		return Value{Type: ValueObject, Value: val.Value.(Object).Copy()}
+	case ValueArray:
+		return Value{Type: ValueObject, Value: val.Value.(Array).Copy()}
+	}
+	return val
 }
 
 func (left Value) realValue() (val Value) {
@@ -136,6 +154,17 @@ func (left Value) compare(right Value) (int, error) {
 		return c, err
 	}
 	return 0, errors.New("not supported type")
+}
+
+func (val Value) String() string {
+	if val.Value == nil {
+		return "nil"
+	}
+	if stringer, ok := val.Value.(Stringer); ok {
+		return stringer.String()
+	}
+
+	return fmt.Sprintf("%s", valueNames[val.Type])
 }
 
 func (left Value) equal(right Value) bool {

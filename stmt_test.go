@@ -190,8 +190,47 @@ func TestStmt_objectCall(t *testing.T) {
 	}
 }
 
-func BenchmarkStmt_arithmatic(b *testing.B) {
+func TestStmt_call(t *testing.T) {
+	// {"0": 1}.set(k == "0" => 4).set(v == 4 => 5)
+	g := newLexMock([]*Token{
+		{Type: TokenBraceOpen},
+		{Type: TokenString, Raw: []byte("0")},
+		{Type: TokenColon},
+		{Type: TokenNumber, Raw: []byte{'1'}},
+		{Type: TokenBraceClose},
+		{Type: TokenDot},
+		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenParenthesesOpen},
+		{Type: TokenIdentifier, Raw: []byte{'k'}},
+		{Type: TokenEqual},
+		{Type: TokenString, Raw: []byte{'0'}},
+		{Type: TokenReduction},
+		{Type: TokenNumber, Raw: []byte{'4'}},
+		{Type: TokenParenthesesClose},
+		{Type: TokenDot},
+		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenParenthesesOpen},
+		{Type: TokenIdentifier, Raw: []byte{'k'}},
+		{Type: TokenEqual},
+		{Type: TokenString, Raw: []byte{'0'}},
+		{Type: TokenReduction},
+		{Type: TokenNumber, Raw: []byte{'5'}},
+		{Type: TokenParenthesesClose},
+	})
+	stmt := NewStmt(NewTokenScanner(g), NewContext())
+	if err := stmt.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if stmt.value.Type != ValueObject {
+		t.Fatal("failed")
+	}
+	val := stmt.value.Value.(Object).Get([]byte{'0'})
+	if !(val.Type == ValueInt && val.Value.(int64) == 5) {
+		t.Fatal("failed")
+	}
+}
 
+func BenchmarkStmt_arithmatic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// ((5 + 2) * 3 == 21) || false => "hello world"
 		g := newLexMock([]*Token{

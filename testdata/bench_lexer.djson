@@ -1,0 +1,8 @@
+data = {
+    "string": "123",
+    "int": 123,
+    "float": 1.23,
+    "bool": true,
+}.set(k == "string" => v + "_new")
+# hello world
+1 != 2 && true || false

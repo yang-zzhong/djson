@@ -2,6 +2,8 @@ package djson
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"testing"
 )
 
@@ -20,8 +22,22 @@ version = "v0.0.1";
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ob.String() != "{\n    \"name\":\"test\",\n    \"version\":\"v0.0.1\"\n}" {
+	if ob.String() != "{\n  \"name\":\"test\",\n  \"version\":\"v0.0.1\"\n}" {
 		t.Fatal("not equal")
+	}
+	t.Logf(ob.String())
+}
+
+func TestTranslator_full(t *testing.T) {
+	f, err := os.Open("./testdata/full.djson")
+	if err != nil {
+		t.Fatal(err)
+	}
+	translator := NewTranslator(NewJsonEncoder("  "), BuffSize(1024))
+	ob := bytes.Buffer{}
+	_, err = translator.Translate(f, &ob)
+	if err != nil {
+		t.Fatal(err)
 	}
 	t.Logf(ob.String())
 }
@@ -39,6 +55,22 @@ func BenchmarkTranslator(b *testing.B) {
 		ib := bytes.NewBuffer([]byte(input))
 		ob := bytes.Buffer{}
 		_, err := translator.Translate(ib, &ob)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkTranslator_full(b *testing.B) {
+	f, err := os.Open("./testdata/full.djson")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		f.Seek(0, io.SeekStart)
+		translator := NewTranslator(NewJsonEncoder("  "), BuffSize(1024))
+		ob := bytes.Buffer{}
+		_, err := translator.Translate(f, &ob)
 		if err != nil {
 			b.Fatal(err)
 		}

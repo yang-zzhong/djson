@@ -2,6 +2,8 @@ package djson
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -207,18 +209,14 @@ data = {
 }
 
 func BenchmarkMatcherLexer_NextToken(n *testing.B) {
-	data := `
-data = {
-    "string": "123",
-    "int": 123,
-    "float": 1.23,
-    "bool": true,
-}.set(k == "string" => v + "_new")
-# hello world
-1 != 2 && true || false`
+	f, err := os.Open("./testdata/bench_lexer.djson")
+	if err != nil {
+		n.Fatal(err)
+	}
 	for i := 0; i < n.N; i++ {
+		f.Seek(0, io.SeekStart)
 		var token Token
-		g := NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
+		g := NewMatcherLexer(f, 512)
 		for token.Type != TokenEOF {
 			if err := g.NextToken(&token); err != nil {
 				n.Fatal(err)

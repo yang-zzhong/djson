@@ -23,7 +23,7 @@ func TestJsonEncoderString(t *testing.T) {
 
 func TestJsonEncoderBool(t *testing.T) {
 	var buf bytes.Buffer
-	NewJsonEncoder().Encode(Value{Type: ValueBool, Value: []byte("true")}, &buf)
+	NewJsonEncoder().Encode(Value{Type: ValueBool, Value: true}, &buf)
 	if buf.String() != "true" {
 		t.Fatal("bool error")
 	}

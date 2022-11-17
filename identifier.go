@@ -27,6 +27,19 @@ func (id *identifier) SetParent(p Value) {
 	id.p = p
 }
 
+func (id *identifier) String() string {
+	n := id.name
+	tmp := id.p
+	for tmp.Type == ValueIdentifier {
+		t := append(tmp.Value.(*identifier).name, '.')
+		n = append(t, n...)
+	}
+	if tmp.Type == ValueNull {
+		return string(n)
+	}
+	return tmp.String() + "." + string(n)
+}
+
 func (id identifier) Value() Value {
 	root, err := id.root()
 	if err != nil {
