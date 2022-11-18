@@ -28,48 +28,6 @@ type TokenMatcher interface {
 	Token() *Token
 }
 
-var staticMatcherStatuses []*tokenMatcherStatus
-
-func init() {
-	staticMatcherStatuses = []*tokenMatcherStatus{
-		{matcher: CharsMatcher([]byte{'{'}, TokenBraceOpen)},
-		{matcher: CharsMatcher([]byte{'}'}, TokenBraceClose)},
-		{matcher: CharsMatcher([]byte{'['}, TokenBracketsOpen)},
-		{matcher: CharsMatcher([]byte{']'}, TokenBracketsClose)},
-		{matcher: CharsMatcher([]byte{'('}, TokenParenthesesOpen)},
-		{matcher: CharsMatcher([]byte{')'}, TokenParenthesesClose)},
-		{matcher: CharsMatcher([]byte{'='}, TokenAssignation)},
-		{matcher: CharsMatcher([]byte{'=', '='}, TokenEqual)},
-		{matcher: CharsMatcher([]byte{'!', '='}, TokenNotEqual)},
-		{matcher: CharsMatcher([]byte{'>'}, TokenGreateThan)},
-		{matcher: CharsMatcher([]byte{'<'}, TokenLessThan)},
-		{matcher: CharsMatcher([]byte{'>', '='}, TokenGreateThanEqual)},
-		{matcher: CharsMatcher([]byte{'<', '='}, TokenLessThanEqual)},
-		{matcher: CharsMatcher([]byte{'|', '|'}, TokenOr)},
-		{matcher: CharsMatcher([]byte{'&', '&'}, TokenAnd)},
-		{matcher: CharsMatcher([]byte{';'}, TokenSemicolon)},
-		{matcher: CharsMatcher([]byte{'+'}, TokenAddition)},
-		{matcher: CharsMatcher([]byte{'-'}, TokenMinus)},
-		{matcher: CharsMatcher([]byte{'*'}, TokenMultiplication)},
-		{matcher: CharsMatcher([]byte{'/'}, TokenDevision)},
-		{matcher: CharsMatcher([]byte{':'}, TokenColon)},
-		{matcher: CharsMatcher([]byte{','}, TokenComma)},
-		{matcher: CharsMatcher([]byte{'.'}, TokenDot)},
-		{matcher: CharsMatcher([]byte{'!'}, TokenExclamation)},
-		{matcher: CharsMatcher([]byte{'n', 'u', 'l', 'l'}, TokenNull)},
-		{matcher: CharsMatcher([]byte{'t', 'r', 'u', 'e'}, TokenTrue)},
-		{matcher: CharsMatcher([]byte{'f', 'a', 'l', 's', 'e'}, TokenFalse)},
-		{matcher: CharsMatcher([]byte{'=', '>'}, TokenReduction)},
-		{matcher: CharsMatcher([]byte{'.', '.', '.'}, TokenRange)},
-		{matcher: IdentifierMatcher()},
-		{matcher: WhitespaceMatcher()},
-		{matcher: CommentMatcher()},
-		{matcher: StringMatcher()},
-		{matcher: NumberMatcher()},
-		{matcher: EOFMatcher()},
-	}
-}
-
 type charsMatcher struct {
 	chars []byte
 	token Token
@@ -290,10 +248,46 @@ type matcherLexer struct {
 
 func NewMatcherLexer(source io.Reader, bufSize uint) *matcherLexer {
 	return &matcherLexer{
-		buf:             NewBuffer(source, int(bufSize)),
-		bs:              make([]byte, 1),
-		stash:           newStash(stashSize),
-		matcherStatuses: staticMatcherStatuses,
+		buf:   NewBuffer(source, int(bufSize)),
+		bs:    make([]byte, 1),
+		stash: newStash(stashSize),
+		matcherStatuses: []*tokenMatcherStatus{
+			{matcher: CharsMatcher([]byte{'{'}, TokenBraceOpen)},
+			{matcher: CharsMatcher([]byte{'}'}, TokenBraceClose)},
+			{matcher: CharsMatcher([]byte{'['}, TokenBracketsOpen)},
+			{matcher: CharsMatcher([]byte{']'}, TokenBracketsClose)},
+			{matcher: CharsMatcher([]byte{'('}, TokenParenthesesOpen)},
+			{matcher: CharsMatcher([]byte{')'}, TokenParenthesesClose)},
+			{matcher: CharsMatcher([]byte{'='}, TokenAssignation)},
+			{matcher: CharsMatcher([]byte{'=', '='}, TokenEqual)},
+			{matcher: CharsMatcher([]byte{'!', '='}, TokenNotEqual)},
+			{matcher: CharsMatcher([]byte{'>'}, TokenGreateThan)},
+			{matcher: CharsMatcher([]byte{'<'}, TokenLessThan)},
+			{matcher: CharsMatcher([]byte{'>', '='}, TokenGreateThanEqual)},
+			{matcher: CharsMatcher([]byte{'<', '='}, TokenLessThanEqual)},
+			{matcher: CharsMatcher([]byte{'|', '|'}, TokenOr)},
+			{matcher: CharsMatcher([]byte{'&', '&'}, TokenAnd)},
+			{matcher: CharsMatcher([]byte{';'}, TokenSemicolon)},
+			{matcher: CharsMatcher([]byte{'+'}, TokenAddition)},
+			{matcher: CharsMatcher([]byte{'-'}, TokenMinus)},
+			{matcher: CharsMatcher([]byte{'*'}, TokenMultiplication)},
+			{matcher: CharsMatcher([]byte{'/'}, TokenDevision)},
+			{matcher: CharsMatcher([]byte{':'}, TokenColon)},
+			{matcher: CharsMatcher([]byte{','}, TokenComma)},
+			{matcher: CharsMatcher([]byte{'.'}, TokenDot)},
+			{matcher: CharsMatcher([]byte{'!'}, TokenExclamation)},
+			{matcher: CharsMatcher([]byte{'n', 'u', 'l', 'l'}, TokenNull)},
+			{matcher: CharsMatcher([]byte{'t', 'r', 'u', 'e'}, TokenTrue)},
+			{matcher: CharsMatcher([]byte{'f', 'a', 'l', 's', 'e'}, TokenFalse)},
+			{matcher: CharsMatcher([]byte{'=', '>'}, TokenReduction)},
+			{matcher: CharsMatcher([]byte{'.', '.', '.'}, TokenRange)},
+			{matcher: IdentifierMatcher()},
+			{matcher: WhitespaceMatcher()},
+			{matcher: CommentMatcher()},
+			{matcher: StringMatcher()},
+			{matcher: NumberMatcher()},
+			{matcher: EOFMatcher()},
+		},
 	}
 }
 

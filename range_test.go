@@ -30,7 +30,8 @@ func TestMapRange(t *testing.T) {
 		if val.Type != ValueInt {
 			t.Fatal("elem type error")
 		}
-		if i+i+1 != int(val.Value.(int64)) {
+		v, _ := val.Value.(Inter).Int()
+		if i+i+1 != int(v) {
 			t.Fatal("elem value error")
 		}
 		return true

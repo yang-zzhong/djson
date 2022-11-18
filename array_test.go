@@ -5,9 +5,9 @@ import "testing"
 func TestArray_set(t *testing.T) {
 	// arr.set(k == 0 => 4)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: int64(1)},
-		Value{Type: ValueInt, Value: int64(2)},
-		Value{Type: ValueInt, Value: int64(3)},
+		Value{Type: ValueInt, Value: NewInt(int64(1))},
+		Value{Type: ValueInt, Value: NewInt(int64(2))},
+		Value{Type: ValueInt, Value: NewInt(int64(3))},
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
@@ -25,17 +25,21 @@ func TestArray_set(t *testing.T) {
 		t.Fatal("array set returned error")
 	}
 	val = val.Value.(Array).Get(0)
-	if !(val.Type == ValueInt && val.Value.(int64) == 4) {
+	if val.Type != ValueInt {
 		t.Fatal("array set error")
 	}
+	if v, _ := val.Value.(Inter).Int(); v != 4 {
+		t.Fatal("array set error")
+	}
+
 }
 
 func TestArray_del(t *testing.T) {
 	// arr.del(i == 0)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: int64(1)},
-		Value{Type: ValueInt, Value: int64(2)},
-		Value{Type: ValueInt, Value: int64(3)},
+		Value{Type: ValueInt, Value: NewInt(int64(1))},
+		Value{Type: ValueInt, Value: NewInt(int64(2))},
+		Value{Type: ValueInt, Value: NewInt(int64(3))},
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
@@ -55,9 +59,9 @@ func TestArray_del(t *testing.T) {
 func TestArray_get(t *testing.T) {
 	// arr.filter(i > 1)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: int64(1)},
-		Value{Type: ValueInt, Value: int64(2)},
-		Value{Type: ValueInt, Value: int64(3)},
+		Value{Type: ValueInt, Value: NewInt(int64(1))},
+		Value{Type: ValueInt, Value: NewInt(int64(2))},
+		Value{Type: ValueInt, Value: NewInt(int64(3))},
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},

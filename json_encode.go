@@ -1,7 +1,6 @@
 package djson
 
 import (
-	"fmt"
 	"io"
 	"regexp"
 )
@@ -37,24 +36,18 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, priv 
 	case ValueNull:
 		write([]byte{'n', 'u', 'l', 'l'})
 		return
+	case ValueInt, ValueBool:
+		write(val.Value.(Bytesable).Bytes())
 	case ValueString:
-		if write([]byte{'"'}) && write(val.Value.(String).Literal()) && write([]byte{'"'}) {
+		if write([]byte{'"'}) && write(val.Value.(String).Bytes()) && write([]byte{'"'}) {
 			return
 		}
 		return
 	case ValueFloat:
-		float := fmt.Sprintf("%f", val.Value)
+		float := val.Value.(Bytesable).Bytes()
 		reg := regexp.MustCompile("0*$")
-		n := reg.ReplaceAllString(float, "")
+		n := reg.ReplaceAll(float, []byte{})
 		write([]byte(n))
-	case ValueInt:
-		write([]byte(fmt.Sprintf("%d", val.Value)))
-	case ValueBool:
-		if val.Value.(bool) {
-			write([]byte{'t', 'r', 'u', 'e'})
-		} else {
-			write([]byte{'f', 'a', 'l', 's', 'e'})
-		}
 	case ValueObject:
 		writes, err = jt.encodeObjectJSON(val.Value.(*object), w, tab, priv)
 		if err != nil {

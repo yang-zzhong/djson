@@ -91,7 +91,7 @@ func (e *stmt) reduct() (Value, error) {
 	return e.calc(func(val Value) (ret Value, done bool, err error) {
 		if e.scanner.Token().Type == TokenReduction {
 			e.useToken(func() {
-				if !val.toBool() {
+				if !val.Bool() {
 					return
 				}
 				var right Value
@@ -122,7 +122,7 @@ func (e *stmt) or() (Value, error) {
 				if right, err = e.and(); err != nil {
 					return
 				}
-				ret = val.or(right)
+				ret = val.Or(right)
 			})
 		}
 		if terminated {
@@ -159,7 +159,7 @@ func (e *stmt) and() (Value, error) {
 				if right, err = e.compare(); err != nil {
 					return
 				}
-				ret = val.and(right)
+				ret = val.And(right)
 			})
 			return
 		}
@@ -186,11 +186,11 @@ func (e *stmt) compare() (Value, error) {
 				if err != nil {
 					return
 				}
-				boo := val.equal(right)
+				boo := val.Equal(right)
 				if TokenNotEqual == token.Type {
 					boo = !boo
 				}
-				ret = Value{Type: ValueBool, Value: boo}
+				ret = Value{Type: ValueBool, Value: NewBool(boo)}
 			})
 			return
 		case TokenGreateThan, TokenGreateThanEqual, TokenLessThan, TokenLessThanEqual:
@@ -202,19 +202,19 @@ func (e *stmt) compare() (Value, error) {
 					return
 				}
 				var com int
-				com, err = val.compare(right)
+				com, err = val.Compare(right)
 				if err != nil {
 					return
 				}
 				switch token.Type {
 				case TokenGreateThan:
-					ret = Value{Type: ValueBool, Value: com > 0}
+					ret = Value{Type: ValueBool, Value: NewBool(com > 0)}
 				case TokenGreateThanEqual:
-					ret = Value{Type: ValueBool, Value: com >= 0}
+					ret = Value{Type: ValueBool, Value: NewBool(com >= 0)}
 				case TokenLessThan:
-					ret = Value{Type: ValueBool, Value: com < 0}
+					ret = Value{Type: ValueBool, Value: NewBool(com < 0)}
 				case TokenLessThanEqual:
-					ret = Value{Type: ValueBool, Value: com <= 0}
+					ret = Value{Type: ValueBool, Value: NewBool(com <= 0)}
 				}
 			})
 			return
@@ -241,7 +241,7 @@ func (e *stmt) expr() (Value, error) {
 				if err != nil {
 					return
 				}
-				ret, err = val.add(term)
+				ret, err = val.Add(term)
 			})
 			return
 		case TokenMinus:
@@ -251,7 +251,7 @@ func (e *stmt) expr() (Value, error) {
 				if err != nil {
 					return
 				}
-				ret, err = val.minus(term)
+				ret, err = val.Minus(term)
 			})
 			return
 		}
@@ -274,14 +274,14 @@ func (e *stmt) term() (Value, error) {
 			e.useToken(func() {
 				var factor Value
 				factor, err = e.dot()
-				ret, err = val.multiply(factor)
+				ret, err = val.Multiply(factor)
 			})
 			return
 		case TokenDevision:
 			e.useToken(func() {
 				var factor Value
 				factor, err = e.dot()
-				ret, err = val.devide(factor)
+				ret, err = val.Devide(factor)
 			})
 			return
 		}
@@ -355,7 +355,7 @@ func (e *stmt) ranges() (Value, error) {
 				return
 			}
 			e.useToken(func() {
-				begin := val.Value.(int64)
+				begin, _ := val.Value.(Inter).Int()
 				var right Value
 				right, err = e.factor()
 				if err != nil {
@@ -365,7 +365,8 @@ func (e *stmt) ranges() (Value, error) {
 					err = errors.New("range ... must follow an int and be followed by an int too")
 					return
 				}
-				ret = Value{Type: ValueRange, Value: NewRange(int(begin), int(right.Value.(int64)))}
+				end, _ := right.Value.(Inter).Int()
+				ret = Value{Type: ValueRange, Value: NewRange(int(begin), int(end))}
 			})
 			return
 		}
@@ -395,17 +396,17 @@ func (e *stmt) factor() (Value, error) {
 			return
 		case TokenTrue:
 			e.useToken(func() {
-				ret = Value{Value: true, Type: ValueBool}
+				ret = Value{Value: NewBool(true), Type: ValueBool}
 			})
 			return
 		case TokenFalse:
 			e.useToken(func() {
-				ret = Value{Value: false, Type: ValueBool}
+				ret = Value{Value: NewBool(false), Type: ValueBool}
 			})
 			return
 		case TokenString:
 			e.useToken(func() {
-				ret = Value{Value: NewString(token.Raw...), Type: ValueString}
+				ret = StringValue(token.Raw...)
 			})
 			return
 		case TokenNumber:
@@ -435,7 +436,7 @@ func (e *stmt) factor() (Value, error) {
 			e.useToken(func() {
 				sub := newObjectExecutor(e.scanner, e.ctx)
 				if err = sub.execute(); err == nil {
-					ret = Value{Type: ValueObject, Value: sub.value}
+					ret = ObjectValue(sub.value)
 				}
 			})
 			return
@@ -449,10 +450,10 @@ func (e *stmt) factor() (Value, error) {
 func (e *stmt) number(bs []byte) Value {
 	if bytes.Contains(bs, []byte{'.'}) {
 		v, _ := strconv.ParseFloat(string(bs), 64)
-		return Value{Type: ValueFloat, Value: v}
+		return FloatValue(v)
 	}
 	v, _ := strconv.ParseInt(string(bs), 10, 64)
-	return Value{Type: ValueInt, Value: v}
+	return IntValue(v)
 }
 
 func (e *stmt) useToken(useToken func()) {

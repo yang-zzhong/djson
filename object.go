@@ -7,6 +7,8 @@ import (
 )
 
 type Object interface {
+	Arithmacable
+	Comparable
 	Set(k []byte, val Value)
 	Get(k []byte) Value
 	Has(k []byte) bool
@@ -30,7 +32,7 @@ func (p *pair) copy() *pair {
 	r := &pair{}
 	r.key = make([]byte, len(p.key))
 	copy(r.key, p.key)
-	r.val = p.val.copy()
+	r.val = p.val.Copy()
 	return r
 }
 
@@ -131,7 +133,7 @@ func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k [
 		if err = expr.Execute(); err != nil {
 			return false
 		}
-		if !expr.value.toBool() {
+		if !expr.value.Bool() {
 			return true
 		}
 		return handle(k, val) == nil
@@ -139,26 +141,28 @@ func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k [
 	return
 }
 
-func objectAdd(obj Object, val Value) Object {
-	ret := obj.Copy()
-	switch val.Type {
-	case ValueObject:
-		val.Value.(Object).Each(func(k []byte, v Value) bool {
-			ret.Set(k, v)
-			return true
-		})
+func (obj *object) Add(val Value) (ret Value, err error) {
+	if val.Type != ValueObject {
+		err = fmt.Errorf("object can't + a [%s]", val.TypeName())
+		return
 	}
-	return ret
+	r := obj.Copy()
+	val.Value.(Object).Each(func(k []byte, v Value) bool {
+		r.Set(k, v)
+		return true
+	})
+	ret = Value{Type: ValueObject, Value: r}
+	return
 }
 
-func objectDel(obj Object, val Value) Object {
-	ret := obj.Copy()
+func (obj *object) Minus(val Value) (ret Value, err error) {
+	r := obj.Copy()
 	switch val.Type {
 	case ValueObject:
 		val.Value.(Object).Each(func(k []byte, val Value) bool {
-			it := ret.Get(k)
-			if val.equal(it) {
-				ret.Del(k)
+			it := r.Get(k)
+			if val.Equal(it) {
+				r.Del(k)
 			}
 			return true
 		})
@@ -166,15 +170,48 @@ func objectDel(obj Object, val Value) Object {
 		val.Value.(Array).Each(func(i int, val Value) bool {
 			switch val.Type {
 			case ValueString:
-				it := ret.Get(val.Value.(String).Literal())
+				it := r.Get(val.Value.(String).Bytes())
 				if it.Type != ValueNull {
-					ret.Del(val.Value.(String).Literal())
+					r.Del(val.Value.(String).Bytes())
 				}
 			}
 			return true
 		})
+	default:
+		err = fmt.Errorf("object can't - a [%s]", val.TypeName())
+		return
 	}
-	return ret
+	ret = Value{Type: ValueObject, Value: r}
+	return
+}
+
+func (obj *object) Multiply(val Value) (ret Value, err error) {
+	err = fmt.Errorf("object can't * a [%s]", val.TypeName())
+	return
+}
+
+func (obj *object) Devide(val Value) (ret Value, err error) {
+	err = fmt.Errorf("object can't / a [%s]", val.TypeName())
+	return
+}
+
+func (obj *object) Compare(val Value) (ret int, err error) {
+	if val.Type != ValueObject {
+		err = fmt.Errorf("object can't compare with [%s]", val.TypeName())
+		return
+	}
+	rr := val.Value.(Object)
+	if obj.Total() > rr.Total() {
+		return 1, nil
+	} else if obj.Total() < rr.Total() {
+		return -1, nil
+	}
+	var c int
+	obj.Each(func(k []byte, val Value) bool {
+		c, err = val.Compare(rr.Get(k))
+		return err == nil && c != 0
+	})
+	return c, err
 }
 
 func (obj *object) Copy() Object {
@@ -268,7 +305,7 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 			err = fmt.Errorf("object key [%v] must be string", expr.value.Value)
 			return
 		}
-		key := expr.value.Value.(String).Literal()
+		key := expr.value.Value.(String).Bytes()
 		func() {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
 			defer e.scanner.PopEnds(2)

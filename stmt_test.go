@@ -18,7 +18,10 @@ func TestStmt_arithmatic(t *testing.T) {
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 6) {
+	if expr.value.Type != ValueInt {
+		t.Fatal("5 + 2 - 1 failed")
+	}
+	if rv, _ := expr.value.Value.(Inter).Int(); rv != 6 {
 		t.Fatal("5 + 2 - 1 failed")
 	}
 	// 5 + 2 * 3
@@ -33,7 +36,10 @@ func TestStmt_arithmatic(t *testing.T) {
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 11) {
+	if expr.value.Type != ValueInt {
+		t.Fatal("5 + 2 * 3 failed")
+	}
+	if rv, _ := expr.value.Value.(Inter).Int(); rv != 11 {
 		t.Fatal("5 + 2 * 3 failed")
 	}
 	// (5 + 2) * 3
@@ -50,7 +56,10 @@ func TestStmt_arithmatic(t *testing.T) {
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.Type == ValueInt && expr.value.Value.(int64) == 21) {
+	if expr.value.Type != ValueInt {
+		t.Fatal("(5 + 2) * 3 failed")
+	}
+	if rv, _ := expr.value.Value.(Inter).Int(); rv != 21 {
 		t.Fatal("(5 + 2) * 3 failed")
 	}
 	// "hello" + "world"
@@ -63,7 +72,7 @@ func TestStmt_arithmatic(t *testing.T) {
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(expr.value.Type == ValueString && string(expr.value.Value.(String).Literal()) == "helloworld") {
+	if !(expr.value.Type == ValueString && string(expr.value.Value.(String).Bytes()) == "helloworld") {
 		t.Fatal("hello world failed")
 	}
 }
@@ -83,7 +92,10 @@ func TestStmt_assignation(t *testing.T) {
 		t.Fatal(err)
 	}
 	val := vs.ValueOf([]byte{'a'})
-	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
+	if val.Type != ValueInt {
+		t.Fatal("assign fatal")
+	}
+	if rv, _ := val.Value.(Inter).Int(); rv != 8 {
 		t.Fatal("assign fatal")
 	}
 }
@@ -105,7 +117,10 @@ func TestStmt_assignationWithReduction(t *testing.T) {
 		t.Fatal(err)
 	}
 	val := vs.ValueOf([]byte{'a'})
-	if !(val.Type == ValueInt && val.Value.(int64) == 8) {
+	if val.Type != ValueInt {
+		t.Fatal("assign fatal")
+	}
+	if rv, _ := val.Value.(Inter).Int(); rv != 8 {
 		t.Fatal("assign fatal")
 	}
 	// a = false => 5 + 3
@@ -147,11 +162,11 @@ func TestStmt_objectOperate(t *testing.T) {
 	}
 	val := expr.value.Value.(Object)
 	hello := val.Get([]byte("hello"))
-	if !(hello.Type == ValueString && string(hello.Value.(String).Literal()) == "world") {
+	if !(hello.Type == ValueString && string(hello.Value.(String).Bytes()) == "world") {
 		t.Fatal("value of hello error")
 	}
 	world := val.Get([]byte("world"))
-	if !(world.Type == ValueString && string(world.Value.(String).Literal()) == "hello") {
+	if !(world.Type == ValueString && string(world.Value.(String).Bytes()) == "hello") {
 		t.Fatal("value of world error")
 	}
 }
@@ -185,7 +200,7 @@ func TestStmt_objectCall(t *testing.T) {
 		t.Fatal("type error")
 	}
 	hello := stmt.value.Value.(Object).Get([]byte("hello"))
-	if !(hello.Type == ValueString && string(hello.Value.(String).Literal()) == "world ^_^") {
+	if !(hello.Type == ValueString && string(hello.Value.(String).Bytes()) == "world ^_^") {
 		t.Fatal("value error")
 	}
 }
@@ -225,8 +240,11 @@ func TestStmt_call(t *testing.T) {
 		t.Fatal("failed")
 	}
 	val := stmt.value.Value.(Object).Get([]byte{'0'})
-	if !(val.Type == ValueInt && val.Value.(int64) == 5) {
-		t.Fatal("failed")
+	if val.Type != ValueInt {
+		t.Fatal("assign fatal")
+	}
+	if rv, _ := val.Value.(Inter).Int(); rv != 5 {
+		t.Fatal("assign fatal")
 	}
 }
 
@@ -253,8 +271,8 @@ func BenchmarkStmt_arithmatic(b *testing.B) {
 		if err := stmt.Execute(); err != nil {
 			b.Fatal(err)
 		}
-		if !(stmt.value.Type == ValueString && bytes.Equal(stmt.value.Value.(String).Literal(), []byte("hello world"))) {
-			b.Fatal("(5 + 2) * 3 failed")
+		if !(stmt.value.Type == ValueString && bytes.Equal(stmt.value.Value.(String).Bytes(), []byte("hello world"))) {
+			b.Fatal("failed")
 		}
 	}
 }

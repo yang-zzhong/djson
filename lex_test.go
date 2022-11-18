@@ -2,6 +2,7 @@ package djson
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -213,6 +214,7 @@ func BenchmarkLexer_NextToken(n *testing.B) {
 		n.Fatal(err)
 	}
 	for i := 0; i < n.N; i++ {
+		f.Seek(0, io.SeekStart)
 		g := NewLexer(f, 128)
 		var token Token
 		for token.Type != TokenEOF {

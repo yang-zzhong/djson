@@ -1,6 +1,10 @@
 package djson
 
+import "fmt"
+
 type Array interface {
+	Arithmacable
+	Comparable
 	Set(i int, val Value)
 	Get(i int) Value
 	Append(val ...Value)
@@ -66,7 +70,7 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
+		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: NewInt(int64(i))})
 		vars.Assign([]byte{'v'}, val)
 		scanner.PushEnds(TokenParenthesesClose)
 		defer scanner.PopEnds(1)
@@ -86,13 +90,13 @@ func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val 
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: int64(i)})
+		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: NewInt(int64(i))})
 		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
 		}
-		if !expr.value.toBool() {
+		if !expr.value.Bool() {
 			return true
 		}
 		handle(val, i)
@@ -101,42 +105,74 @@ func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val 
 	return
 }
 
-func arrayAdd(arr Array, val Value) Array {
-	ret := arr.Copy()
-	switch val.Type {
-	case ValueArray:
-		val.Value.(Array).Each(func(i int, val Value) bool {
-			ret.Append(val)
-			return true
-		})
-	default:
-		ret.Append(val)
+func (arr *array) Add(val Value) (ret Value, err error) {
+	r := arr.Copy()
+	if val.Type != ValueArray {
+		err = fmt.Errorf("array can't + a [%s]", val.TypeName())
 	}
-	return ret
+	val.Value.(Array).Each(func(i int, val Value) bool {
+		r.Append(val)
+		return true
+	})
+	ret = Value{Type: ValueArray, Value: r}
+	return
 }
 
-func arrayDel(arr Array, val Value) Array {
-	ret := arr.Copy()
+func (arr *array) Minus(val Value) (ret Value, err error) {
+	r := arr.Copy()
+	if val.Type != ValueArray {
+		err = fmt.Errorf("array can't + a [%s]", val.TypeName())
+	}
 	for i := 0; i < arr.Total(); i++ {
 		v := arr.Get(i)
 		var eq bool
 		switch val.Type {
 		case ValueArray:
 			val.Value.(Array).Each(func(_ int, right Value) bool {
-				eq = v.equal(right)
+				eq = v.Equal(right)
 				return !eq
 			})
 		default:
-			eq = v.equal(val)
+			eq = v.Equal(val)
 		}
 		if eq {
-			ret.Del(i)
+			r.Del(i)
 			i--
 		}
 	}
-	return ret
+	ret = Value{Type: ValueArray, Value: r}
+	return
 }
 
+func (arr *array) Multiply(val Value) (ret Value, err error) {
+	err = fmt.Errorf("array can't * a [%s]", val.TypeName())
+	return
+}
+
+func (arr *array) Devide(val Value) (ret Value, err error) {
+	err = fmt.Errorf("array can't / a [%s]", val.TypeName())
+	return
+}
+
+func (arr *array) Compare(val Value) (ret int, err error) {
+	if val.Type != ValueArray {
+		err = fmt.Errorf("array can't compare with [%s]", val.TypeName())
+		return
+	}
+	rr := val.Value.(Array)
+	if arr.Total() > rr.Total() {
+		return 1, nil
+	} else if arr.Total() < rr.Total() {
+		return -1, nil
+	}
+	var c int
+	arr.Each(func(i int, val Value) bool {
+		c, err = val.Compare(rr.Get(i))
+		return err == nil && c != 0
+	})
+	return c, err
+
+}
 func (arr *array) Set(idx int, val Value) {
 	arr.items[idx] = val
 }

@@ -113,7 +113,7 @@ func (id identifier) Call(scanner TokenScanner, ctx Context) (val Value, err err
 	val = id.p.realValue()
 	call, ok := val.Value.(callable)
 	if !ok {
-		err = fmt.Errorf("%s can't support call function", valueNames[val.Type])
+		err = fmt.Errorf("%s can't support call function", val.TypeName())
 		return
 	}
 	return call.call(string(name), val, scanner, ctx)

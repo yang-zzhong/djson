@@ -1,13 +1,27 @@
 package djson
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 )
 
-type Stringer interface {
-	String() string
+type TypeConverter interface {
+	Stringer
+	Bytesable
+	Booler
+	Inter
+	Floater
+}
+
+type Comparable interface {
+	Compare(Value) (int, error)
+}
+
+type Arithmacable interface {
+	Add(Value) (Value, error)
+	Minus(Value) (Value, error)
+	Devide(Value) (Value, error)
+	Multiply(Value) (Value, error)
 }
 
 type ValueType int
@@ -24,8 +38,14 @@ const (
 	ValueRange
 )
 
-var (
-	valueNames = map[ValueType]string{
+type Value struct {
+	Value interface{}
+	Type  ValueType
+	p     *Value
+}
+
+func (val Value) TypeName() string {
+	return map[ValueType]string{
 		ValueNull:       "null",
 		ValueObject:     "object",
 		ValueArray:      "array",
@@ -34,21 +54,34 @@ var (
 		ValueInt:        "int",
 		ValueBool:       "bool",
 		ValueIdentifier: "idenfitier",
-	}
-)
-
-const (
-	logicAnd = iota
-	logicOr
-)
-
-type Value struct {
-	Value interface{}
-	Type  ValueType
-	p     *Value
+	}[val.Type]
 }
 
-func (val Value) copy() Value {
+func IntValue(v int64) Value {
+	return Value{Type: ValueInt, Value: NewInt(v)}
+}
+
+func FloatValue(v float64) Value {
+	return Value{Type: ValueFloat, Value: NewFloat(v)}
+}
+
+func StringValue(v ...byte) Value {
+	return Value{Type: ValueString, Value: NewString(v...)}
+}
+
+func ObjectValue(o Object) Value {
+	return Value{Type: ValueObject, Value: o}
+}
+
+func ArrayValue(a Array) Value {
+	return Value{Type: ValueArray, Value: a}
+}
+
+func BoolValue(b bool) Value {
+	return Value{Type: ValueBool, Value: NewBool(b)}
+}
+
+func (val Value) Copy() Value {
 	switch val.Type {
 	case ValueFloat, ValueInt, ValueBool, ValueNull:
 		return Value{Type: val.Type, Value: val.Value}
@@ -71,214 +104,95 @@ func (left Value) realValue() (val Value) {
 	return
 }
 
-func (left Value) add(right Value) (Value, error) {
-	return left.arithmatic(right, '+')
+func (left Value) Add(right Value) (val Value, err error) {
+	left = left.realValue()
+	right = right.realValue()
+	addable, ok := left.Value.(Arithmacable)
+	if !ok {
+		err = fmt.Errorf("can't + [%s] with [%s]", left.TypeName(), right.TypeName())
+		return
+	}
+	return addable.Add(right)
 }
 
-func (left Value) minus(right Value) (Value, error) {
-	return left.arithmatic(right, '-')
+func (left Value) Minus(right Value) (val Value, err error) {
+	left = left.realValue()
+	right = right.realValue()
+	minusable, ok := left.Value.(Arithmacable)
+	if !ok {
+		err = fmt.Errorf("can't - [%s] with [%s]", left.TypeName(), right.TypeName())
+		return
+	}
+	return minusable.Minus(right)
 }
 
-func (left Value) multiply(right Value) (Value, error) {
-	return left.arithmatic(right, '*')
+func (left Value) Multiply(right Value) (val Value, err error) {
+	left = left.realValue()
+	right = right.realValue()
+	multi, ok := left.Value.(Arithmacable)
+	if !ok {
+		err = fmt.Errorf("can't * [%s] with [%s]", left.TypeName(), right.TypeName())
+		return
+	}
+	return multi.Multiply(right)
 }
 
-func (left Value) devide(right Value) (Value, error) {
-	return left.arithmatic(right, '/')
+func (left Value) Devide(right Value) (val Value, err error) {
+	left = left.realValue()
+	right = right.realValue()
+	devi, ok := left.Value.(Arithmacable)
+	if !ok {
+		err = fmt.Errorf("can't * [%s] with [%s]", left.TypeName(), right.TypeName())
+		return
+	}
+	return devi.Devide(right)
 }
 
-func (left Value) compare(right Value) (int, error) {
+func (left Value) Compare(right Value) (ret int, err error) {
 	rlv := left.realValue()
 	rrv := right.realValue()
 	if rlv.Type != rrv.Type {
 		return 0, errors.New("type not match")
 	}
-	switch rlv.Type {
-	case ValueNull:
-		if rrv.Type == ValueNull {
-			return 0, nil
-		} else if rrv.Type != ValueNull {
-			return -1, nil
-		}
-	case ValueInt:
-		lr := rlv.Value.(int64)
-		rr := rrv.Value.(int64)
-		if lr > rr {
-			return 1, nil
-		} else if lr == rr {
-			return 0, nil
-		} else {
-			return -1, nil
-		}
-	case ValueFloat:
-		lr := rlv.Value.(float64)
-		rr := rrv.Value.(float64)
-		if lr > rr {
-			return 1, nil
-		} else if lr == rr {
-			return 0, nil
-		} else {
-			return -1, nil
-		}
-	case ValueString:
-		return bytes.Compare(rlv.Value.(String).Literal(), rrv.Value.(String).Literal()), nil
-	case ValueObject:
-		lr := rlv.Value.(Object)
-		rr := rrv.Value.(Object)
-		if lr.Total() > rr.Total() {
-			return 1, nil
-		} else if lr.Total() < rr.Total() {
-			return -1, nil
-		}
-		var c int
-		var err error
-		lr.Each(func(k []byte, val Value) bool {
-			c, err = val.compare(rr.Get(k))
-			return err == nil && c != 0
-		})
-		return c, err
-	case ValueArray:
-		lr := rlv.Value.(Array)
-		rr := rrv.Value.(Array)
-		if lr.Total() > rr.Total() {
-			return 1, nil
-		} else if lr.Total() < rr.Total() {
-			return -1, nil
-		}
-		var c int
-		var err error
-		lr.Each(func(i int, val Value) bool {
-			c, err = val.compare(rr.Get(i))
-			return err == nil && c != 0
-		})
-		return c, err
+	com, ok := rlv.Value.(Comparable)
+	if !ok {
+		err = fmt.Errorf("can't * [%s] with [%s]", rlv.TypeName(), rrv.TypeName())
+		return
 	}
-	return 0, errors.New("not supported type")
+	return com.Compare(right)
 }
 
 func (val Value) String() string {
+	val = val.realValue()
 	if val.Value == nil {
 		return "nil"
 	}
 	if stringer, ok := val.Value.(Stringer); ok {
 		return stringer.String()
 	}
-
-	return fmt.Sprintf("%s", valueNames[val.Type])
+	return val.TypeName()
 }
 
-func (left Value) equal(right Value) bool {
-	c, err := left.compare(right)
+func (left Value) Equal(right Value) bool {
+	c, err := left.Compare(right)
 	if err != nil {
 		return false
 	}
 	return c == 0
 }
 
-func (left Value) arithmatic(right Value, operator byte) (val Value, err error) {
-	left = left.realValue()
-	right = right.realValue()
-	switch left.Type {
-	case ValueNull:
-		return right, nil
-	case ValueInt, ValueFloat:
-		if right.Type != left.Type {
-			err = errors.New("type not match")
-			return
-		}
-		switch operator {
-		case '+':
-			val.Type = left.Type
-			if left.Type == ValueInt {
-				val.Value = left.Value.(int64) + right.Value.(int64)
-			} else if left.Type == ValueFloat {
-				val.Value = left.Value.(float64) + right.Value.(float64)
-			}
-		case '-':
-			val.Type = left.Type
-			if left.Type == ValueInt {
-				val.Value = left.Value.(int64) - right.Value.(int64)
-			} else if left.Type == ValueFloat {
-				val.Value = left.Value.(float64) - right.Value.(float64)
-			}
-		case '*':
-			val.Type = left.Type
-			if left.Type == ValueInt {
-				val.Value = left.Value.(int64) * right.Value.(int64)
-			} else if left.Type == ValueFloat {
-				val.Value = left.Value.(float64) * right.Value.(float64)
-			}
-		case '/':
-			val.Type = left.Type
-			if left.Type == ValueInt {
-				val.Value = left.Value.(int64) / right.Value.(int64)
-			} else if left.Type == ValueFloat {
-				val.Value = left.Value.(float64) / right.Value.(float64)
-			}
-		}
-	case ValueString:
-		if operator != '+' {
-			err = fmt.Errorf("unsupported string operator [%s]", []byte{operator})
-			return
-		}
-		if right.Type != ValueString {
-			err = errors.New("type not match")
-			return
-		}
-		val.Type = ValueString
-		val.Value = NewString(append(left.Value.(String).Literal(), right.Value.(String).Literal()...)...)
-	case ValueArray:
-		switch operator {
-		case '+':
-			val = Value{Type: ValueArray, Value: arrayAdd(left.Value.(Array), right)}
-		case '-':
-			val = Value{Type: ValueArray, Value: arrayDel(left.Value.(Array), right)}
-		default:
-			err = fmt.Errorf("unsupported arithmatic for array as left value: %s", []byte{operator})
-		}
-	case ValueObject:
-		switch operator {
-		case '+':
-			if right.Type != ValueObject {
-				err = fmt.Errorf("unsupported arithmatic for object as right value")
-			}
-			val = Value{Type: ValueObject, Value: objectAdd(left.Value.(Object), right)}
-		case '-':
-			val = Value{Type: ValueObject, Value: objectDel(left.Value.(Object), right)}
-		default:
-			err = fmt.Errorf("unsupported arithmatic for object as left value: %s", []byte{operator})
-		}
-	default:
-		err = errors.New("unsupported type to arithmatic")
-	}
-	return
+func (left Value) And(right Value) Value {
+	return Value{Type: ValueBool, Value: left.Bool() && right.Bool()}
 }
 
-func (left Value) and(right Value) Value {
-	return Value{Type: ValueBool, Value: left.toBool() && right.toBool()}
+func (left Value) Or(right Value) Value {
+	return Value{Type: ValueBool, Value: left.Bool() || right.Bool()}
 }
 
-func (left Value) or(right Value) Value {
-	return Value{Type: ValueBool, Value: left.toBool() || right.toBool()}
-}
-
-func (val Value) toBool() (ret bool) {
+func (val Value) Bool() (ret bool) {
 	val = val.realValue()
-	switch val.Type {
-	case ValueInt:
-		ret = val.Value.(int64) != 0
-	case ValueFloat:
-		ret = int64(val.Value.(float64)) != 0
-	case ValueString:
-		ret = len(val.Value.(String).Literal()) > 0
-	case ValueArray:
-		ret = val.Value.(Array).Total() > 0
-	case ValueObject:
-		ret = val.Value.(Object).Total() > 0
-	case ValueBool:
-		ret = val.Value.(bool)
-	case ValueNull:
-		ret = false
+	if b, ok := val.Value.(Booler); ok {
+		return b.Bool()
 	}
-	return
+	return false
 }

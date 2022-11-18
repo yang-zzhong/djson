@@ -19,7 +19,11 @@ func TestString_Index(t *testing.T) {
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(stmt.value.Type == ValueInt && stmt.value.Value.(int64) == 6) {
+	if stmt.value.Type != ValueInt {
+		t.Fatal("index error")
+	}
+	v, _ := stmt.value.Value.(Inter).Int()
+	if v != 6 {
 		t.Fatal("index error")
 	}
 }
@@ -61,7 +65,7 @@ func TestString_sub(t *testing.T) {
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !(stmt.value.Type == ValueString && bytes.Equal(stmt.value.Value.(String).Literal(), []byte("hello"))) {
+	if !(stmt.value.Type == ValueString && bytes.Equal(stmt.value.Value.(String).Bytes(), []byte("hello"))) {
 		t.Fatal("match error")
 	}
 }
