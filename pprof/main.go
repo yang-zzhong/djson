@@ -22,7 +22,7 @@ data = {
 # hello world
 1 != 2 && true || false`
 	var g djson.Lexer
-	g = djson.NewMatcherLexer(bytes.NewBuffer([]byte(data)), 128)
+	g = djson.NewLexer(bytes.NewBuffer([]byte(data)), 128)
 	if old {
 		g = djson.NewLexer(bytes.NewBuffer([]byte(data)), 128)
 	}

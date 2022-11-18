@@ -30,7 +30,7 @@ func NewTranslator(e Encoder, opts ...func(*translator)) *translator {
 }
 
 func (t translator) Translate(r io.Reader, w io.Writer) (int, error) {
-	scanner := NewTokenScanner(NewMatcherLexer(r, t.bufSize))
+	scanner := NewTokenScanner(NewLexer(r, t.bufSize))
 	p := NewParser(scanner)
 	val, _, err := p.Parse()
 	if err != nil {
