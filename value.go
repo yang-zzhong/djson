@@ -58,11 +58,11 @@ func (val Value) TypeName() string {
 }
 
 func IntValue(v int64) Value {
-	return Value{Type: ValueInt, Value: NewInt(v)}
+	return Value{Type: ValueInt, Value: Int(v)}
 }
 
 func FloatValue(v float64) Value {
-	return Value{Type: ValueFloat, Value: NewFloat(v)}
+	return Value{Type: ValueFloat, Value: Float(v)}
 }
 
 func StringValue(v ...byte) Value {
@@ -78,7 +78,7 @@ func ArrayValue(a Array) Value {
 }
 
 func BoolValue(b bool) Value {
-	return Value{Type: ValueBool, Value: NewBool(b)}
+	return Value{Type: ValueBool, Value: Bool(b)}
 }
 
 func (val Value) Copy() Value {

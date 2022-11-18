@@ -5,9 +5,9 @@ import "testing"
 func TestObject_set(t *testing.T) {
 	// obj.set(k == "0" => 4).set(k == "0" => 5)
 	obj := NewObject(
-		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: NewInt(int64(1))}},
-		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: NewInt(int64(2))}},
-		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: NewInt(int64(3))}},
+		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: Int(int64(1))}},
+		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: Int(int64(2))}},
+		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: Int(int64(3))}},
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'k'}},
@@ -36,9 +36,9 @@ func TestObject_set(t *testing.T) {
 func TestObject_del(t *testing.T) {
 	// obj.del(k == "0")
 	obj := NewObject(
-		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: NewInt(int64(1))}},
-		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: NewInt(int64(2))}},
-		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: NewInt(int64(3))}},
+		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: Int(int64(1))}},
+		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: Int(int64(2))}},
+		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: Int(int64(3))}},
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'k'}},

@@ -25,7 +25,7 @@ func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 	r := NewArray()
 	val.Value.(Array).Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: NewInt(int64(i))})
+		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
@@ -75,7 +75,7 @@ func (arr *range_) Del(idx int) {
 
 func (arr *range_) Each(handle func(i int, val Value) bool) {
 	for i := arr.from; i <= arr.to; i++ {
-		if !handle(i-arr.from, Value{Type: ValueInt, Value: NewInt(int64(i))}) {
+		if !handle(i-arr.from, IntValue(int64(i))) {
 			break
 		}
 	}

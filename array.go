@@ -70,7 +70,7 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: NewInt(int64(i))})
+		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
 		scanner.PushEnds(TokenParenthesesClose)
 		defer scanner.PopEnds(1)
@@ -90,7 +90,7 @@ func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val 
 	defer scanner.PopEnds(1)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, Value{Type: ValueInt, Value: NewInt(int64(i))})
+		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
@@ -227,7 +227,7 @@ func (e *arrayExecutor) items() (val Array, err error) {
 	arr := NewArray()
 	e.scanner.PushEnds(TokenBracketsClose, TokenComma)
 	defer e.scanner.PopEnds(2)
-	e.vars.pushMe(Value{Type: ValueArray, Value: &arr})
+	e.vars.pushMe(ArrayValue(arr))
 	defer e.vars.popMe()
 	for {
 		expr := NewStmt(e.scanner, e.vars)

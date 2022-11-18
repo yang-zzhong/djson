@@ -190,7 +190,7 @@ func (e *stmt) compare() (Value, error) {
 				if TokenNotEqual == token.Type {
 					boo = !boo
 				}
-				ret = Value{Type: ValueBool, Value: NewBool(boo)}
+				ret = BoolValue(boo)
 			})
 			return
 		case TokenGreateThan, TokenGreateThanEqual, TokenLessThan, TokenLessThanEqual:
@@ -208,13 +208,13 @@ func (e *stmt) compare() (Value, error) {
 				}
 				switch token.Type {
 				case TokenGreateThan:
-					ret = Value{Type: ValueBool, Value: NewBool(com > 0)}
+					ret = BoolValue(com > 0)
 				case TokenGreateThanEqual:
-					ret = Value{Type: ValueBool, Value: NewBool(com >= 0)}
+					ret = BoolValue(com >= 0)
 				case TokenLessThan:
-					ret = Value{Type: ValueBool, Value: NewBool(com < 0)}
+					ret = BoolValue(com < 0)
 				case TokenLessThanEqual:
-					ret = Value{Type: ValueBool, Value: NewBool(com <= 0)}
+					ret = BoolValue(com <= 0)
 				}
 			})
 			return
@@ -396,12 +396,12 @@ func (e *stmt) factor() (Value, error) {
 			return
 		case TokenTrue:
 			e.useToken(func() {
-				ret = Value{Value: NewBool(true), Type: ValueBool}
+				ret = BoolValue(true)
 			})
 			return
 		case TokenFalse:
 			e.useToken(func() {
-				ret = Value{Value: NewBool(false), Type: ValueBool}
+				ret = BoolValue(false)
 			})
 			return
 		case TokenString:
@@ -428,7 +428,7 @@ func (e *stmt) factor() (Value, error) {
 			e.useToken(func() {
 				sub := newArrayExecutor(e.scanner, e.ctx)
 				if err = sub.execute(); err == nil {
-					ret = Value{Type: ValueArray, Value: sub.value}
+					ret = ArrayValue(sub.value)
 				}
 			})
 			return

@@ -8,39 +8,29 @@ type Floater interface {
 	Float() (float64, error)
 }
 
-type Float interface {
-	TypeConverter
-	Comparable
-	Arithmacable
-}
+type Float float64
 
-type floatl float64
-
-func NewFloat(i float64) Float {
-	return floatl(i)
-}
-
-func (i floatl) Bool() bool {
+func (i Float) Bool() bool {
 	return i != 0
 }
 
-func (i floatl) String() string {
+func (i Float) String() string {
 	return fmt.Sprintf("%f", i)
 }
 
-func (i floatl) Bytes() []byte {
+func (i Float) Bytes() []byte {
 	return []byte(i.String())
 }
 
-func (i floatl) Int() (int64, error) {
+func (i Float) Int() (int64, error) {
 	return int64(i), nil
 }
 
-func (i floatl) Float() (float64, error) {
+func (i Float) Float() (float64, error) {
 	return float64(i), nil
 }
 
-func (i floatl) Compare(val Value) (int, error) {
+func (i Float) Compare(val Value) (int, error) {
 	if val.Type != ValueFloat {
 		return 0, fmt.Errorf("can't compare float with [%s]", val.TypeName())
 	}
@@ -48,7 +38,7 @@ func (i floatl) Compare(val Value) (int, error) {
 	return int(float64(i) - r), nil
 }
 
-func (i floatl) Add(val Value) (ret Value, err error) {
+func (i Float) Add(val Value) (ret Value, err error) {
 	floater, ok := val.Value.(Floater)
 	if !ok {
 		err = fmt.Errorf("float can't + a [%s]", val.TypeName())
@@ -63,11 +53,11 @@ func (i floatl) Add(val Value) (ret Value, err error) {
 		err = fmt.Errorf("int can't + a [%s] with value %s", val.TypeName(), strer.String())
 		return
 	}
-	ret = Value{Type: ValueFloat, Value: NewFloat(float64(i) + rr)}
+	ret = Value{Type: ValueFloat, Value: Float(float64(i) + rr)}
 	return
 }
 
-func (i floatl) Minus(val Value) (ret Value, err error) {
+func (i Float) Minus(val Value) (ret Value, err error) {
 	floater, ok := val.Value.(Floater)
 	if !ok {
 		err = fmt.Errorf("float can't - a [%s]", val.TypeName())
@@ -83,11 +73,11 @@ func (i floatl) Minus(val Value) (ret Value, err error) {
 		err = fmt.Errorf("int can't - a [%s] with value %s", val.TypeName(), strer.String())
 		return
 	}
-	ret = Value{Type: ValueFloat, Value: NewFloat(float64(i) - rr)}
+	ret = Value{Type: ValueFloat, Value: Float(float64(i) - rr)}
 	return
 }
 
-func (i floatl) Multiply(val Value) (ret Value, err error) {
+func (i Float) Multiply(val Value) (ret Value, err error) {
 	floater, ok := val.Value.(Floater)
 	if !ok {
 		err = fmt.Errorf("float can't * a [%s]", val.TypeName())
@@ -102,11 +92,11 @@ func (i floatl) Multiply(val Value) (ret Value, err error) {
 		}
 		err = fmt.Errorf("int can't * a [%s] with value %s", val.TypeName(), strer.String())
 	}
-	ret = Value{Type: ValueFloat, Value: NewFloat(float64(i) * rr)}
+	ret = Value{Type: ValueFloat, Value: Float(float64(i) * rr)}
 	return
 }
 
-func (i floatl) Devide(val Value) (ret Value, err error) {
+func (i Float) Devide(val Value) (ret Value, err error) {
 	floater, ok := val.Value.(Floater)
 	if !ok {
 		err = fmt.Errorf("float can't / a [%s]", val.TypeName())
@@ -121,6 +111,6 @@ func (i floatl) Devide(val Value) (ret Value, err error) {
 		}
 		err = fmt.Errorf("int can't / a [%s] with value %s", val.TypeName(), strer.String())
 	}
-	ret = Value{Type: ValueFloat, Value: NewFloat(float64(i) / rr)}
+	ret = Value{Type: ValueFloat, Value: Float(float64(i) / rr)}
 	return
 }

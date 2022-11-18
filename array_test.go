@@ -5,9 +5,9 @@ import "testing"
 func TestArray_set(t *testing.T) {
 	// arr.set(k == 0 => 4)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: NewInt(int64(1))},
-		Value{Type: ValueInt, Value: NewInt(int64(2))},
-		Value{Type: ValueInt, Value: NewInt(int64(3))},
+		IntValue(int64(1)),
+		IntValue(int64(2)),
+		IntValue(int64(3)),
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
@@ -37,9 +37,9 @@ func TestArray_set(t *testing.T) {
 func TestArray_del(t *testing.T) {
 	// arr.del(i == 0)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: NewInt(int64(1))},
-		Value{Type: ValueInt, Value: NewInt(int64(2))},
-		Value{Type: ValueInt, Value: NewInt(int64(3))},
+		IntValue(int64(1)),
+		IntValue(int64(2)),
+		IntValue(int64(3)),
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
@@ -59,9 +59,9 @@ func TestArray_del(t *testing.T) {
 func TestArray_get(t *testing.T) {
 	// arr.filter(i > 1)
 	arr := NewArray(
-		Value{Type: ValueInt, Value: NewInt(int64(1))},
-		Value{Type: ValueInt, Value: NewInt(int64(2))},
-		Value{Type: ValueInt, Value: NewInt(int64(3))},
+		IntValue(int64(1)),
+		IntValue(int64(2)),
+		IntValue(int64(3)),
 	)
 	scanner := NewTokenScanner(newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},

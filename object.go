@@ -103,7 +103,7 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.Assign([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
+		vars.Assign([]byte{'k'}, StringValue(k...))
 		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(nexter, vars)
 		if err = expr.Execute(); err != nil {
@@ -127,7 +127,7 @@ func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k [
 	defer nexter.PopEnds(1)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
-		vars.Assign([]byte{'k'}, Value{Type: ValueString, Value: NewString(k...)})
+		vars.Assign([]byte{'k'}, StringValue(k...))
 		vars.Assign([]byte{'v'}, val)
 		expr := NewStmt(nexter, vars)
 		if err = expr.Execute(); err != nil {
@@ -289,7 +289,7 @@ func (e *objectExecutor) execute() (err error) {
 
 func (e *objectExecutor) pairs() (val Object, err error) {
 	val = NewObject()
-	e.vars.pushMe(Value{Type: ValueObject, Value: val})
+	e.vars.pushMe(ObjectValue(val))
 	defer e.vars.popMe()
 	for {
 		expr := NewStmt(e.scanner, e.vars)

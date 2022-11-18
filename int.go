@@ -9,39 +9,29 @@ type Inter interface {
 	Int() (int64, error)
 }
 
-type Int interface {
-	TypeConverter
-	Comparable
-	Arithmacable
-}
+type Int int64
 
-type intl int64
-
-func NewInt(i int64) Int {
-	return intl(i)
-}
-
-func (i intl) Bool() bool {
+func (i Int) Bool() bool {
 	return i != 0
 }
 
-func (i intl) String() string {
+func (i Int) String() string {
 	return strconv.Itoa(int(i))
 }
 
-func (i intl) Bytes() []byte {
+func (i Int) Bytes() []byte {
 	return []byte(i.String())
 }
 
-func (i intl) Int() (int64, error) {
+func (i Int) Int() (int64, error) {
 	return int64(i), nil
 }
 
-func (i intl) Float() (float64, error) {
+func (i Int) Float() (float64, error) {
 	return float64(i), nil
 }
 
-func (i intl) Compare(val Value) (int, error) {
+func (i Int) Compare(val Value) (int, error) {
 	if val.Type != ValueInt {
 		return 0, fmt.Errorf("can't compare int with [%s]", val.TypeName())
 	}
@@ -49,12 +39,12 @@ func (i intl) Compare(val Value) (int, error) {
 	return int(int64(i) - r), nil
 }
 
-func (i intl) Add(val Value) (ret Value, err error) {
+func (i Int) Add(val Value) (ret Value, err error) {
 	switch val.Type {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: NewFloat(ri + rr)}
+		ret = Value{Type: ValueFloat, Value: Float(ri + rr)}
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -72,17 +62,17 @@ func (i intl) Add(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't + a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: NewInt(int64(i) + rr)}
+		ret = Value{Type: ValueInt, Value: Int(int64(i) + rr)}
 	}
 	return
 }
 
-func (i intl) Minus(val Value) (ret Value, err error) {
+func (i Int) Minus(val Value) (ret Value, err error) {
 	switch val.Type {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: NewFloat(ri - rr)}
+		ret = Value{Type: ValueFloat, Value: Float(ri - rr)}
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -100,17 +90,17 @@ func (i intl) Minus(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't - a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: NewInt(int64(i) - rr)}
+		ret = Value{Type: ValueInt, Value: Int(int64(i) - rr)}
 	}
 	return
 }
 
-func (i intl) Multiply(val Value) (ret Value, err error) {
+func (i Int) Multiply(val Value) (ret Value, err error) {
 	switch val.Type {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: NewFloat(ri * rr)}
+		ret = Value{Type: ValueFloat, Value: Float(ri * rr)}
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -128,17 +118,17 @@ func (i intl) Multiply(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't * a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: NewInt(int64(i) * rr)}
+		ret = Value{Type: ValueInt, Value: Int(int64(i) * rr)}
 	}
 	return
 }
 
-func (i intl) Devide(val Value) (ret Value, err error) {
+func (i Int) Devide(val Value) (ret Value, err error) {
 	switch val.Type {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: NewFloat(ri / rr)}
+		ret = Value{Type: ValueFloat, Value: Float(ri / rr)}
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -156,7 +146,7 @@ func (i intl) Devide(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't / a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: NewInt(int64(i) / rr)}
+		ret = Value{Type: ValueInt, Value: Int(int64(i) / rr)}
 	}
 	return
 }

@@ -146,7 +146,7 @@ func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err 
 	}
 	sub := stmt.value.Value.(String).Bytes()
 	s := val.Value.(String).Bytes()
-	ret = Value{Type: ValueInt, Value: NewInt(int64(bytes.Index(s, sub)))}
+	ret = Value{Type: ValueInt, Value: Int(int64(bytes.Index(s, sub)))}
 	return
 }
 
