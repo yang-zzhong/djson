@@ -181,7 +181,7 @@ func (obj *object) Minus(val Value) (ret Value, err error) {
 		err = fmt.Errorf("object can't - a [%s]", val.TypeName())
 		return
 	}
-	ret = Value{Type: ValueObject, Value: r}
+	ret = ObjectValue(r)
 	return
 }
 
@@ -322,4 +322,27 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 			return
 		}
 	}
+}
+
+func (obj *object) lookup(k []byte) Value {
+	i, r := splitKeyAndRest(k)
+	if !bytes.Equal(i, []byte{'*'}) {
+		val := obj.Get(i)
+		if val.Type == ValueNull || len(r) == 0 {
+			return val
+		}
+		return val.lookup(r)
+	}
+	arr := NewArray()
+	for _, p := range obj.pairs {
+		if len(r) == 0 {
+			arr.items = append(arr.items, p.val)
+			continue
+		}
+		item := p.val.lookup(r)
+		if item.Type != ValueNull {
+			arr.items = append(arr.items, item)
+		}
+	}
+	return Value{Type: ValueArray, Value: arr}
 }

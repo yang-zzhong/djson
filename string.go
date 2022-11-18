@@ -12,7 +12,7 @@ type Stringer interface {
 	String() string
 }
 
-type Bytesable interface {
+type Byter interface {
 	Bytes() []byte
 }
 
@@ -65,7 +65,7 @@ func (s *str) Bool() bool {
 }
 
 func (s *str) Add(val Value) (ret Value, err error) {
-	if l, ok := val.Value.(Bytesable); ok {
+	if l, ok := val.Value.(Byter); ok {
 		r := s.Copy()
 		r.Concat(l.Bytes())
 		ret = Value{Type: ValueString, Value: r}
@@ -81,7 +81,7 @@ func (s *str) Add(val Value) (ret Value, err error) {
 }
 
 func (s *str) Minus(val Value) (ret Value, err error) {
-	if l, ok := val.Value.(Bytesable); ok {
+	if l, ok := val.Value.(Byter); ok {
 		r := s.Copy()
 		r.Replace(l.Bytes(), []byte{})
 		ret = Value{Type: ValueString, Value: r}

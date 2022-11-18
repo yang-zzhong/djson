@@ -1,13 +1,14 @@
 package djson
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 )
 
 type TypeConverter interface {
 	Stringer
-	Bytesable
+	Byter
 	Booler
 	Inter
 	Floater
@@ -22,6 +23,10 @@ type Arithmacable interface {
 	Minus(Value) (Value, error)
 	Devide(Value) (Value, error)
 	Multiply(Value) (Value, error)
+}
+
+type lookuper interface {
+	lookup([]byte) Value
 }
 
 type ValueType int
@@ -190,11 +195,11 @@ func (left Value) Equal(right Value) bool {
 }
 
 func (left Value) And(right Value) Value {
-	return Value{Type: ValueBool, Value: left.Bool() && right.Bool()}
+	return BoolValue(left.Bool() && right.Bool())
 }
 
 func (left Value) Or(right Value) Value {
-	return Value{Type: ValueBool, Value: left.Bool() || right.Bool()}
+	return BoolValue(left.Bool() || right.Bool())
 }
 
 func (val Value) Bool() (ret bool) {
@@ -203,4 +208,25 @@ func (val Value) Bool() (ret bool) {
 		return b.Bool()
 	}
 	return false
+}
+
+func (val Value) lookup(k []byte) Value {
+	lookup := func() Value {
+		lookuper, ok := val.Value.(lookuper)
+		if ok {
+			return lookuper.lookup(k)
+		}
+		return Value{Type: ValueNull}
+	}
+	i, r := splitKeyAndRest(k)
+	if bytes.Equal(i, []byte{'_', 'p'}) {
+		if val.Type == ValueObject && !val.Value.(Object).Has(i) {
+			return lookup()
+		}
+		if val.p == nil {
+			return Value{Type: ValueNull}
+		}
+		return val.p.lookup(r)
+	}
+	return lookup()
 }

@@ -37,14 +37,14 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, priv 
 		write([]byte{'n', 'u', 'l', 'l'})
 		return
 	case ValueInt, ValueBool:
-		write(val.Value.(Bytesable).Bytes())
+		write(val.Value.(Byter).Bytes())
 	case ValueString:
 		if write([]byte{'"'}) && write(val.Value.(String).Bytes()) && write([]byte{'"'}) {
 			return
 		}
 		return
 	case ValueFloat:
-		float := val.Value.(Bytesable).Bytes()
+		float := val.Value.(Byter).Bytes()
 		reg := regexp.MustCompile("0*$")
 		n := reg.ReplaceAll(float, []byte{})
 		write([]byte(n))

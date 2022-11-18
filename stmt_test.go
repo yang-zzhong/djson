@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestStmt_arithmatic(t *testing.T) {
+func TestNewerStmt_arithmatic(t *testing.T) {
 	// 5 + 2 - 1
 	g := newLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
@@ -77,7 +77,7 @@ func TestStmt_arithmatic(t *testing.T) {
 	}
 }
 
-func TestStmt_assignation(t *testing.T) {
+func TestNewerStmt_assignation(t *testing.T) {
 	// a = 5 + 3
 	g := newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
@@ -100,7 +100,7 @@ func TestStmt_assignation(t *testing.T) {
 	}
 }
 
-func TestStmt_assignationWithReduction(t *testing.T) {
+func TestNewerStmt_assignationWithReduction(t *testing.T) {
 	// a = true => 5 + 3
 	g := newLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
@@ -137,7 +137,7 @@ func TestStmt_assignationWithReduction(t *testing.T) {
 	}
 }
 
-func TestStmt_objectOperate(t *testing.T) {
+func TestNewerStmt_objectOperate(t *testing.T) {
 	// {"hello": "world"} + {"world": "hello"}
 	g := newLexMock([]*Token{
 		{Type: TokenBraceOpen},
@@ -171,7 +171,7 @@ func TestStmt_objectOperate(t *testing.T) {
 	}
 }
 
-func TestStmt_objectCall(t *testing.T) {
+func TestNewerStmt_objectCall(t *testing.T) {
 	// {"hello": "world"}.set(k == "hello" => v + " ^_^")
 	g := newLexMock([]*Token{
 		{Type: TokenBraceOpen},
@@ -205,8 +205,8 @@ func TestStmt_objectCall(t *testing.T) {
 	}
 }
 
-func TestStmt_call(t *testing.T) {
-	// {"0": 1}.set(k == "0" => 4).set(v == 4 => 5)
+func TestNewerStmt_call(t *testing.T) {
+	// {"0": 1}.set(k == "0" => 4)
 	g := newLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("0")},
@@ -241,14 +241,14 @@ func TestStmt_call(t *testing.T) {
 	}
 	val := stmt.value.Value.(Object).Get([]byte{'0'})
 	if val.Type != ValueInt {
-		t.Fatal("assign fatal")
+		t.Fatal("call fatal")
 	}
-	if rv, _ := val.Value.(Inter).Int(); rv != 5 {
-		t.Fatal("assign fatal")
+	if rv, _ := val.Value.(Inter).Int(); rv != 4 {
+		t.Fatal("call fatal")
 	}
 }
 
-func BenchmarkStmt_arithmatic(b *testing.B) {
+func BenchmarkNewerStmt_arithmatic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// ((5 + 2) * 3 == 21) || false => "hello world"
 		g := newLexMock([]*Token{

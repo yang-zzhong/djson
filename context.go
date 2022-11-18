@@ -58,3 +58,32 @@ func (v *ctx) popMe() {
 		v.Assign(mk, *me.p)
 	}
 }
+
+func path(p string) []byte {
+	return []byte(p)
+}
+
+func splitKeyAndRest(ik []byte) (k []byte, rest []byte) {
+	dot := bytes.Index(ik, []byte{'.'})
+	if dot < 0 {
+		k = ik
+		return
+	}
+	k = ik[0:dot]
+	rest = ik[dot+1:]
+	return
+}
+
+func (vs ctx) lookup(k []byte) Value {
+	i, r := splitKeyAndRest(k)
+	for _, v := range vs {
+		if !bytes.Equal(v.Name, i) {
+			continue
+		}
+		if len(r) == 0 {
+			return v.Value
+		}
+		return v.Value.lookup(r)
+	}
+	return Value{Type: ValueNull}
+}

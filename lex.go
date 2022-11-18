@@ -31,6 +31,52 @@ type TokenMatcher interface {
 	Token() *Token
 }
 
+type Buffer interface {
+	Take([]byte) (int, error)
+	TakeBack()
+}
+
+type buffer struct {
+	r            io.Reader
+	bs           []byte
+	lastTakeSize int
+	offset       int
+	total        int
+}
+
+func NewBuffer(r io.Reader, size int) Buffer {
+	return &buffer{
+		r:  r,
+		bs: make([]byte, size),
+	}
+}
+
+func (b *buffer) read() (err error) {
+	b.total, err = b.r.Read(b.bs)
+	if err != nil {
+		return
+	}
+	b.offset = 0
+	return
+}
+
+func (b *buffer) Take(bs []byte) (taked int, err error) {
+	if b.total == 0 || b.offset == b.total {
+		if err = b.read(); err != nil {
+			return
+		}
+	}
+	b.lastTakeSize = copy(bs, b.bs[b.offset:])
+	b.offset += b.lastTakeSize
+	taked = b.lastTakeSize
+	return
+}
+
+func (b *buffer) TakeBack() {
+	b.offset -= b.lastTakeSize
+	b.lastTakeSize = 0
+}
+
 type charsMatcher struct {
 	chars []byte
 	token Token
@@ -472,4 +518,26 @@ func isUpperCaseAlpha(b byte) bool {
 
 func isNumber(b byte) bool {
 	return b >= '0' && b <= '9'
+}
+
+type lexmock struct {
+	offset int
+	tokens []*Token
+}
+
+func (g *lexmock) NextToken(token *Token) error {
+	if len(g.tokens) == g.offset {
+		token.Type = TokenEOF
+		return nil
+	}
+	token.Raw = g.tokens[g.offset].Raw
+	token.Type = g.tokens[g.offset].Type
+	g.offset++
+	return nil
+}
+
+func newLexMock(tokens []*Token) *lexmock {
+	return &lexmock{
+		tokens: tokens,
+	}
 }

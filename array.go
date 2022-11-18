@@ -1,6 +1,10 @@
 package djson
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"strconv"
+)
 
 type Array interface {
 	Arithmacable
@@ -239,10 +243,38 @@ func (e *arrayExecutor) items() (val Array, err error) {
 			return
 		}
 		arr.Append(expr.value)
-		if expr.endAt() == TokenBracketsClose {
+		if e.scanner.EndAt() == TokenBracketsClose {
 			break
 		}
 	}
 	val = arr
 	return
+}
+
+func (arr *array) lookup(k []byte) Value {
+	i, r := splitKeyAndRest(k)
+	if !bytes.Equal(i, []byte{'*'}) {
+		idx, err := strconv.Atoi(string(i))
+		if err != nil {
+			return Value{Type: ValueNull}
+		}
+		if idx > len(arr.items) {
+			return Value{Type: ValueNull}
+		}
+		if len(r) == 0 {
+			return arr.items[idx]
+		}
+		return arr.items[idx].lookup(r)
+	}
+	if len(r) == 0 {
+		return Value{Type: ValueArray, Value: arr}
+	}
+	ret := NewArray()
+	for _, item := range arr.items {
+		v := item.lookup(r)
+		if v.Type != ValueNull {
+			ret.items = append(ret.items, v)
+		}
+	}
+	return Value{Type: ValueArray, Value: ret}
 }

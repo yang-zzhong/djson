@@ -44,7 +44,7 @@ func (i Int) Add(val Value) (ret Value, err error) {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: Float(ri + rr)}
+		ret = FloatValue(ri + rr)
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -62,7 +62,7 @@ func (i Int) Add(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't + a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: Int(int64(i) + rr)}
+		ret = IntValue(int64(i) + rr)
 	}
 	return
 }
@@ -72,7 +72,7 @@ func (i Int) Minus(val Value) (ret Value, err error) {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: Float(ri - rr)}
+		ret = FloatValue(ri - rr)
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -90,7 +90,7 @@ func (i Int) Minus(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't - a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: Int(int64(i) - rr)}
+		ret = IntValue(int64(i) - rr)
 	}
 	return
 }
@@ -100,7 +100,7 @@ func (i Int) Multiply(val Value) (ret Value, err error) {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: Float(ri * rr)}
+		ret = FloatValue(ri * rr)
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -118,7 +118,7 @@ func (i Int) Multiply(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't * a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: Int(int64(i) * rr)}
+		ret = IntValue(int64(i) * rr)
 	}
 	return
 }
@@ -128,7 +128,7 @@ func (i Int) Devide(val Value) (ret Value, err error) {
 	case ValueFloat:
 		ri, _ := i.Float()
 		rr, _ := val.Value.(Floater).Float()
-		ret = Value{Type: ValueFloat, Value: Float(ri / rr)}
+		ret = FloatValue(ri / rr)
 	default:
 		inter, ok := val.Value.(Inter)
 		if !ok {
@@ -146,7 +146,7 @@ func (i Int) Devide(val Value) (ret Value, err error) {
 			err = fmt.Errorf("int can't / a [%s] with value %s", val.TypeName(), strer.String())
 			return
 		}
-		ret = Value{Type: ValueInt, Value: Int(int64(i) / rr)}
+		ret = IntValue(int64(i) / rr)
 	}
 	return
 }

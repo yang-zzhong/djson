@@ -31,10 +31,21 @@ func NewTranslator(e Encoder, opts ...func(*translator)) *translator {
 
 func (t translator) Translate(r io.Reader, w io.Writer) (int, error) {
 	scanner := NewTokenScanner(NewLexer(r, t.bufSize))
-	p := NewParser(scanner)
-	val, _, err := p.Parse()
-	if err != nil {
-		return 0, err
+	scanner.PushEnds(TokenSemicolon)
+	defer scanner.PopEnds(1)
+	vars := NewContext()
+	stmt := NewStmt(scanner, vars)
+	var val Value
+	for {
+		if err := stmt.Execute(); err != nil {
+			return 0, err
+		}
+		if stmt.value.Type != ValueNull {
+			val = stmt.value
+		}
+		if scanner.EndAt() == TokenEOF {
+			break
+		}
 	}
 	return t.encoder.Encode(val, w)
 }

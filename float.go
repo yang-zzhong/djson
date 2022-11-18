@@ -53,7 +53,7 @@ func (i Float) Add(val Value) (ret Value, err error) {
 		err = fmt.Errorf("int can't + a [%s] with value %s", val.TypeName(), strer.String())
 		return
 	}
-	ret = Value{Type: ValueFloat, Value: Float(float64(i) + rr)}
+	ret = FloatValue(float64(i) + rr)
 	return
 }
 
@@ -73,7 +73,7 @@ func (i Float) Minus(val Value) (ret Value, err error) {
 		err = fmt.Errorf("int can't - a [%s] with value %s", val.TypeName(), strer.String())
 		return
 	}
-	ret = Value{Type: ValueFloat, Value: Float(float64(i) - rr)}
+	ret = FloatValue(float64(i) - rr)
 	return
 }
 
@@ -92,7 +92,7 @@ func (i Float) Multiply(val Value) (ret Value, err error) {
 		}
 		err = fmt.Errorf("int can't * a [%s] with value %s", val.TypeName(), strer.String())
 	}
-	ret = Value{Type: ValueFloat, Value: Float(float64(i) * rr)}
+	ret = FloatValue(float64(i) * rr)
 	return
 }
 
@@ -111,6 +111,6 @@ func (i Float) Devide(val Value) (ret Value, err error) {
 		}
 		err = fmt.Errorf("int can't / a [%s] with value %s", val.TypeName(), strer.String())
 	}
-	ret = Value{Type: ValueFloat, Value: Float(float64(i) / rr)}
+	ret = FloatValue(float64(i) / rr)
 	return
 }

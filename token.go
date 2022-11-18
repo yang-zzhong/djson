@@ -49,3 +49,43 @@ type Token struct {
 func (t Token) Skip() bool {
 	return t.Type == TokenWhitespace
 }
+
+func (t Token) Name() string {
+	return map[TokenType]string{
+		TokenBraceOpen:        "BraceOpen",
+		TokenBraceClose:       "BraceClose",
+		TokenBracketsOpen:     "BracketsOpen",     //  [
+		TokenBracketsClose:    "BracketsClose",    //  ]
+		TokenParenthesesOpen:  "ParenthesesOpen",  //  (
+		TokenParenthesesClose: "ParenthesesClose", //  )
+		TokenAssignation:      "Assignation",      // =
+		TokenEqual:            "Equal",            // ==
+		TokenNotEqual:         "NotEqual",         // !=
+		TokenGreateThan:       "GreateThan",       // >
+		TokenLessThan:         "LessThan",         // <
+		TokenGreateThanEqual:  "GreateThanEqual",  // >=
+		TokenLessThanEqual:    "LessThanEqual",    // <=
+		TokenOr:               "Or",               // ||
+		TokenAnd:              "And",              // &&
+		TokenSemicolon:        "Semicolon",        // ;
+		TokenAddition:         "Addition",         // +
+		TokenMinus:            "Minus",            // -
+		TokenMultiplication:   "Multiplication",   // *
+		TokenDevision:         "Devision",         // /
+		TokenColon:            "Colon",            // :
+		TokenComma:            "Comma",            // ,
+		TokenDot:              "Dot",              // .
+		TokenEOF:              "EOF",              // eof
+		TokenExclamation:      "Exclamation",      // !
+		TokenComment:          "Comment",          // comment
+		TokenNull:             "Null",             // null
+		TokenTrue:             "True",             // true
+		TokenFalse:            "False",            // false
+		TokenReduction:        "Reduction",        // =>
+		TokenNumber:           "Number",           // number
+		TokenString:           "String",           // string
+		TokenRange:            "Range",            // ... // [1 ... 10].map({"key": "" + v + "_x"})
+		TokenIdentifier:       "Identifier",       // identifier
+		TokenWhitespace:       "Whitespace",
+	}[t.Type]
+}
