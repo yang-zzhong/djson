@@ -81,6 +81,14 @@ func BoolValue(b bool) Value {
 	return Value{Type: ValueBool, Value: Bool(b)}
 }
 
+func RangeValue(begin, end int) Value {
+	return Value{Type: ValueRange, Value: NewRange(begin, end)}
+}
+
+func NullValue() Value {
+	return Value{Type: ValueNull}
+}
+
 func (val Value) Copy() Value {
 	switch val.Type {
 	case ValueFloat, ValueInt, ValueBool, ValueNull:
