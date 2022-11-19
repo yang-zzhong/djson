@@ -135,7 +135,7 @@ func (s *str) Concat(ss []byte) {
 
 func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	stmt := NewStmt(scanner, vars)
 	if err = stmt.Execute(); err != nil {
 		return
@@ -152,7 +152,7 @@ func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err 
 
 func subString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	stmt := NewStmt(scanner, vars)
 	if err = stmt.Execute(); err != nil {
 		return
@@ -194,7 +194,7 @@ func subString(val Value, scanner TokenScanner, vars Context) (ret Value, err er
 
 func matchString(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	stmt := NewStmt(scanner, vars)
 	if err = stmt.Execute(); err != nil {
 		return

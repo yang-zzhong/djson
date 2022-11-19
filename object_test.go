@@ -3,7 +3,7 @@ package djson
 import "testing"
 
 func TestObject_set(t *testing.T) {
-	// obj.set(k == "0" => 4).set(k == "0" => 5)
+	// obj.set(k == "0" => 4)
 	obj := NewObject(
 		&pair{key: []byte{'0'}, val: Value{Type: ValueInt, Value: Int(int64(1))}},
 		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: Int(int64(2))}},

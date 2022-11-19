@@ -63,11 +63,11 @@ func TestTokenScanner_next(t *testing.T) {
 		t.Fatal("token type not match after forward")
 	}
 	scanner.PushEnds(TokenAddition)
-	if !(scanner.endsWhen.total == 2 && scanner.endsWhen.when[1] == TokenAddition) {
+	if scanner.endsWhen.when[TokenAddition] != 1 {
 		t.Fatal("push ends error")
 	}
-	scanner.PopEnds(1)
-	if !(scanner.endsWhen.total == 1 && scanner.endsWhen.when[0] == TokenEOF) {
+	scanner.PopEnds(TokenAddition)
+	if scanner.endsWhen.when[TokenAddition] != 0 {
 		t.Fatal("pop ends error")
 	}
 }

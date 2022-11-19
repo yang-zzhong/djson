@@ -100,7 +100,7 @@ func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err 
 func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
 	offset := nexter.Offset()
 	nexter.PushEnds(TokenParenthesesClose)
-	defer nexter.PopEnds(1)
+	defer nexter.PopEnds(TokenParenthesesClose)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
 		vars.Assign([]byte{'k'}, StringValue(k...))
@@ -124,7 +124,7 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
 	offset := nexter.Offset()
 	nexter.PushEnds(TokenParenthesesClose)
-	defer nexter.PopEnds(1)
+	defer nexter.PopEnds(TokenParenthesesClose)
 	o.Each(func(k []byte, val Value) bool {
 		nexter.SetOffset(offset)
 		vars.Assign([]byte{'k'}, StringValue(k...))
@@ -295,7 +295,7 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 		expr := NewStmt(e.scanner, e.vars)
 		func() {
 			e.scanner.PushEnds(TokenColon)
-			defer e.scanner.PopEnds(1)
+			defer e.scanner.PopEnds(TokenColon)
 			err = expr.Execute()
 		}()
 		if err != nil || expr.value.Type == ValueNull {
@@ -308,7 +308,7 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 		key := expr.value.Value.(String).Bytes()
 		func() {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
-			defer e.scanner.PopEnds(2)
+			defer e.scanner.PopEnds(TokenComma, TokenBraceClose)
 			expr = NewStmt(e.scanner, e.vars)
 			if err = expr.Execute(); err != nil {
 				return

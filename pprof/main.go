@@ -29,7 +29,7 @@ data = {
 	pprof.StartCPUProfile(os.Stdout)
 	defer pprof.StopCPUProfile()
 	for i := 0; i < 100000; i++ {
-		g.(djson.ReplaceSourcer).ReplaceSource(bytes.NewBuffer([]byte(data)), 128)
+		g.(djson.SourceReplacer).ReplaceSource(bytes.NewBuffer([]byte(data)), 128)
 		var token djson.Token
 		for token.Type != djson.TokenEOF {
 			if err := g.NextToken(&token); err != nil {

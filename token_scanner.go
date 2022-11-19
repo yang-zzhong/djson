@@ -6,53 +6,45 @@ type tokens struct {
 }
 
 type endsWhen struct {
-	total int
-	when  []TokenType
+	when map[TokenType]int
 }
 
 func newEndsWhen() *endsWhen {
 	return &endsWhen{
-		when: make([]TokenType, 16),
+		when: make(map[TokenType]int, 16),
 	}
 }
 
 func (ew *endsWhen) push(tt ...TokenType) {
-	l := len(ew.when)
-	if l <= ew.total {
-		tmp := make([]TokenType, l*2)
-		copy(tmp, ew.when)
-		ew.when = tmp
+	for _, t := range tt {
+		if v, ok := ew.when[t]; ok {
+			ew.when[t] = v + 1
+			continue
+		}
+		ew.when[t] = 1
 	}
-	for i, t := range tt {
-		ew.when[ew.total+i] = t
-	}
-	ew.total += len(tt)
 }
 
-func (ew *endsWhen) pop(n int) {
-	ew.total -= n
-	if ew.total < 0 {
-		ew.total = 0
+func (ew *endsWhen) pop(tt ...TokenType) {
+	for _, t := range tt {
+		if v, ok := ew.when[t]; ok {
+			v -= 1
+			ew.when[t] = v
+		}
 	}
 }
 
 func (ew *endsWhen) ended(t TokenType) bool {
-	for i := 0; i < ew.total; i++ {
-		if ew.when[i] == t {
-			return true
-		}
+	if v, ok := ew.when[t]; ok && v > 0 {
+		return true
 	}
 	return false
-}
-
-func (ew *endsWhen) reset() {
-	ew.total = 0
 }
 
 type TokenScanner interface {
 	Forward()
 	PushEnds(...TokenType)
-	PopEnds(int)
+	PopEnds(...TokenType)
 	Offset() int
 	SetOffset(int)
 	Scan() (end bool, err error)
@@ -91,8 +83,8 @@ func (t *tokenScanner) PushEnds(tt ...TokenType) {
 	t.endsWhen.push(tt...)
 }
 
-func (t *tokenScanner) PopEnds(count int) {
-	t.endsWhen.pop(count)
+func (t *tokenScanner) PopEnds(tt ...TokenType) {
+	t.endsWhen.pop(tt...)
 }
 
 func (t *tokenScanner) Offset() int {
@@ -128,8 +120,12 @@ func (t *tokenScanner) Scan() (end bool, err error) {
 		end = true
 		return
 	}
-	end = t.endsWhen.ended(t.token.Type)
+	end = t.EndReached()
 	return
+}
+
+func (t *tokenScanner) EndReached() bool {
+	return t.endsWhen.ended(t.token.Type)
 }
 
 func (t *tokenScanner) EndAt() TokenType {

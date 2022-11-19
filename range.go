@@ -21,7 +21,7 @@ func NewRange(from, to int) *range_ {
 func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	r := NewArray()
 	val.Value.(Array).Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)

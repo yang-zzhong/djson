@@ -39,7 +39,7 @@ func (jt jsonEncoder) encodeJSONIndent(val Value, w io.Writer, tab []byte, priv 
 	case ValueInt, ValueBool:
 		write(val.Value.(Byter).Bytes())
 	case ValueString:
-		if write([]byte{'"'}) && write(val.Value.(String).Bytes()) && write([]byte{'"'}) {
+		if write([]byte{'"'}) && write(val.Value.(Byter).Bytes()) && write([]byte{'"'}) {
 			return
 		}
 		return

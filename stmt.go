@@ -10,42 +10,43 @@ import (
 type expr struct {
 	next    *expr
 	name    string
-	handle  func(val Value, token *Token) (ret Value, leftValue bool, err error)
+	handle  func(val Value, token *Token) (handled bool, ret Value, err error)
 	scanner TokenScanner
+	opt     *option
 }
 
 func (e *expr) Value(val Value) (ret Value, err error) {
-	var leftValue, end, leftValueGetted bool
-	var i int
+	terminal := e.next == nil
+	var matched, end, nextTried bool
+	var ht Value
 	for {
-		if i > 50 {
-			err = fmt.Errorf("[%s] calls a lot", e.name)
-			return
-		}
-		i++
 		if end, err = e.scanner.Scan(); err != nil || end {
 			return
 		}
-		if val, leftValue, err = e.handle(val, e.scanner.Token()); err != nil {
+		if terminal {
+			_, ret, err = e.handle(val, e.scanner.Token())
+			if e.opt.debug {
+				fmt.Printf("%s\n", e.name)
+			}
 			return
-		}
-		if leftValue && leftValueGetted {
+		} else if matched, ht, err = e.handle(val, e.scanner.Token()); err != nil {
 			return
-		}
-		if !leftValue {
-			// fmt.Printf("%s\n", e.name)
+		} else if matched {
+			nextTried = true
+			if e.opt.debug {
+				fmt.Printf("%s\n", e.name)
+			}
+			val = ht
 			ret = val
-			continue
-		}
-		if e.next == nil {
+		} else if !nextTried {
+			if val, err = e.next.Value(val); err != nil {
+				return
+			}
 			ret = val
+			nextTried = true
+		} else {
 			return
 		}
-		if val, err = e.next.Value(val); err != nil {
-			return
-		}
-		ret = val
-		leftValueGetted = true
 	}
 }
 
@@ -55,14 +56,14 @@ func (e *expr) WithNext(next *expr) {
 
 func Assign(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Assign"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenAssignation {
-			leftValue = true
 			return
 		}
+		matched = true
 		e.scanner.Forward()
 		var right Value
-		if right, err = e.next.Value(val); err != nil {
+		if right, err = e.next.Value(NullValue()); err != nil {
 			return
 		}
 		if val.Type != ValueIdentifier {
@@ -78,20 +79,19 @@ func Assign(scanner TokenScanner) *expr {
 
 func Reduction(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Reduction"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenReduction {
-			leftValue = true
 			return
 		}
+		matched = true
 		e.scanner.Forward()
-		if !val.Bool() {
-			return
-		}
 		var right Value
-		if right, err = e.next.Value(val); err != nil {
+		if right, err = e.next.Value(NullValue()); err != nil {
 			return
 		}
-		ret = right
+		if val.Bool() {
+			ret = right
+		}
 		return
 	}
 	return e
@@ -99,11 +99,11 @@ func Reduction(scanner TokenScanner) *expr {
 
 func Or(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Or"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenOr {
-			leftValue = true
 			return
 		}
+		matched = true
 		e.scanner.Forward()
 		if !val.Bool() {
 			return
@@ -120,11 +120,11 @@ func Or(scanner TokenScanner) *expr {
 
 func And(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "And"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenAnd {
-			leftValue = true
 			return
 		}
+		matched = true
 		e.scanner.Forward()
 		if !val.Bool() {
 			return
@@ -141,9 +141,10 @@ func And(scanner TokenScanner) *expr {
 
 func Compare(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Compare"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenEqual, TokenNotEqual:
+			matched = true
 			scanner.Forward()
 			var right Value
 			right, err = e.next.Value(val)
@@ -157,6 +158,7 @@ func Compare(scanner TokenScanner) *expr {
 			ret = BoolValue(boo)
 			return
 		case TokenGreateThan, TokenGreateThanEqual, TokenLessThan, TokenLessThanEqual:
+			matched = true
 			scanner.Forward()
 			var right Value
 			right, err = e.next.Value(val)
@@ -180,7 +182,6 @@ func Compare(scanner TokenScanner) *expr {
 			}
 			return
 		}
-		leftValue = true
 		return
 	}
 	return e
@@ -188,9 +189,10 @@ func Compare(scanner TokenScanner) *expr {
 
 func AddOrMinus(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "AddOrMinus"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenAddition:
+			matched = true
 			scanner.Forward()
 			var term Value
 			if term, err = e.next.Value(val); err != nil {
@@ -199,6 +201,7 @@ func AddOrMinus(scanner TokenScanner) *expr {
 			ret, err = val.Add(term)
 			return
 		case TokenMinus:
+			matched = true
 			scanner.Forward()
 			var term Value
 			if term, err = e.next.Value(val); err != nil {
@@ -207,7 +210,6 @@ func AddOrMinus(scanner TokenScanner) *expr {
 			ret, err = val.Minus(term)
 			return
 		}
-		leftValue = true
 		return
 	}
 	return e
@@ -215,9 +217,10 @@ func AddOrMinus(scanner TokenScanner) *expr {
 
 func MultiplyOrDevide(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "MultiplyOrDevide"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenMultiplication:
+			matched = true
 			scanner.Forward()
 			var term Value
 			if term, err = e.next.Value(val); err != nil {
@@ -226,6 +229,7 @@ func MultiplyOrDevide(scanner TokenScanner) *expr {
 			ret, err = val.Multiply(term)
 			return
 		case TokenDevision:
+			matched = true
 			scanner.Forward()
 			var term Value
 			if term, err = e.next.Value(val); err != nil {
@@ -234,7 +238,6 @@ func MultiplyOrDevide(scanner TokenScanner) *expr {
 			ret, err = val.Devide(term)
 			return
 		}
-		leftValue = true
 		return
 	}
 	return e
@@ -242,16 +245,18 @@ func MultiplyOrDevide(scanner TokenScanner) *expr {
 
 func Call(scanner TokenScanner, ctx Context) *expr {
 	e := &expr{scanner: scanner, name: "Call"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if !(val.Type == ValueIdentifier && e.scanner.Token().Type == TokenParenthesesOpen) {
-			leftValue = true
 			return
 		}
+		matched = true
 		scanner.Forward()
 		identifier := val.Value.(Identifier)
 		e.scanner.PushEnds(TokenParenthesesClose)
-		defer e.scanner.PopEnds(1)
-		ret, err = identifier.Call(e.scanner, ctx)
+		defer e.scanner.PopEnds(TokenParenthesesClose)
+		if ret, err = identifier.Call(e.scanner, ctx); err != nil {
+			return
+		}
 		return
 	}
 	return e
@@ -259,14 +264,14 @@ func Call(scanner TokenScanner, ctx Context) *expr {
 
 func Dot(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Dot"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenDot {
-			leftValue = true
 			return
 		}
+		matched = true
 		scanner.Forward()
 		var right Value
-		right, err = e.next.Value(val)
+		right, err = e.next.Value(NullValue())
 		if err != nil {
 			return
 		}
@@ -282,11 +287,11 @@ func Dot(scanner TokenScanner) *expr {
 
 func Range(scanner TokenScanner) *expr {
 	e := &expr{scanner: scanner, name: "Range"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenRange {
-			leftValue = true
 			return
 		}
+		matched = true
 		scanner.Forward()
 		if val.Type != ValueInt {
 			err = errors.New("range ... must follow an int and be followed by an int too")
@@ -311,8 +316,7 @@ func Range(scanner TokenScanner) *expr {
 
 func Factor(scanner TokenScanner, ctx Context) *expr {
 	e := &expr{scanner: scanner, name: "Factor"}
-	e.handle = func(val Value, token *Token) (ret Value, leftValue bool, err error) {
-		leftValue = true
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
 		scanner.Forward()
 		switch token.Type {
 		case TokenIdentifier:
@@ -336,7 +340,7 @@ func Factor(scanner TokenScanner, ctx Context) *expr {
 			ret = IntValue(v)
 		case TokenParenthesesOpen:
 			e.scanner.PushEnds(TokenParenthesesClose)
-			defer e.scanner.PopEnds(1)
+			defer e.scanner.PopEnds(TokenParenthesesClose)
 			sub := NewStmt(e.scanner, ctx)
 			if err = sub.Execute(); err == nil {
 				ret = sub.value
@@ -361,8 +365,9 @@ func Factor(scanner TokenScanner, ctx Context) *expr {
 
 type exprs []*expr
 
-func (es exprs) init() *expr {
+func (es exprs) init(opt *option) *expr {
 	for i := 0; i < len(es); i++ {
+		es[i].opt = opt
 		if i < len(es)-1 {
 			es[i].WithNext(es[i+1])
 		}
@@ -374,9 +379,22 @@ type stmt struct {
 	scanner TokenScanner
 	expr    *expr
 	value   Value
+	opt     *option
 }
 
-func NewStmt(scanner TokenScanner, ctx Context) *stmt {
+type option struct {
+	debug bool
+}
+
+type StmtOption func(opt *option)
+
+func Debug() StmtOption {
+	return func(opt *option) {
+		opt.debug = true
+	}
+}
+
+func NewStmt(scanner TokenScanner, ctx Context, opts ...StmtOption) *stmt {
 	es := exprs([]*expr{
 		Assign(scanner),
 		Reduction(scanner),
@@ -390,17 +408,32 @@ func NewStmt(scanner TokenScanner, ctx Context) *stmt {
 		Range(scanner),
 		Factor(scanner, ctx),
 	})
-	return &stmt{expr: es.init(), scanner: scanner}
+	opt := &option{}
+	for _, apply := range opts {
+		apply(opt)
+	}
+	return &stmt{expr: es.init(opt), scanner: scanner, opt: opt}
 }
 
 func (ns *stmt) Execute() (err error) {
 	ns.scanner.PushEnds(TokenSemicolon)
-	defer ns.scanner.PopEnds(1)
+	defer ns.scanner.PopEnds(TokenSemicolon)
 	defer func() {
 		if ns.scanner.Token().Type != TokenEOF {
 			ns.scanner.Forward()
 		}
 	}()
-	ns.value, err = ns.expr.Value(NullValue())
-	return
+	var end bool
+	for {
+		if end, err = ns.scanner.Scan(); end || err != nil {
+			return
+		}
+		if ns.value, err = ns.Value(ns.value); err != nil {
+			return
+		}
+	}
+}
+
+func (ns *stmt) Value(val Value) (Value, error) {
+	return ns.expr.Value(val)
 }

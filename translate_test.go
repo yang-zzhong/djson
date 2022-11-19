@@ -61,6 +61,27 @@ func BenchmarkTranslator(b *testing.B) {
 	}
 }
 
+func TestTranslator_assign(t *testing.T) {
+	data := `
+header = {
+  "type": "h3",
+  "innerText": ""
+};
+header.set(k == "innerText" => "基本信息");
+`
+	ib := bytes.NewBuffer([]byte(data))
+	ob := bytes.Buffer{}
+	translator := NewTranslator(NewJsonEncoder("  "), BuffSize(1024))
+	_, err := translator.Translate(ib, &ob)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ob.String() != "{\n  \"type\":\"h3\",\n  \"innerText\":\"基本信息\"\n}" {
+		t.Fatal("not equal")
+	}
+	t.Logf(ob.String())
+}
+
 func BenchmarkTranslator_full(b *testing.B) {
 	f, err := os.Open("./testdata/full.djson")
 	if err != nil {

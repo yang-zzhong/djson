@@ -206,7 +206,7 @@ func TestNewerStmt_objectCall(t *testing.T) {
 }
 
 func TestNewerStmt_call(t *testing.T) {
-	// {"0": 1}.set(k == "0" => 4)
+	// {"0": 1}.set(k == "0" => 4).set(v == 4 => 5)
 	g := newLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("0")},
@@ -225,9 +225,9 @@ func TestNewerStmt_call(t *testing.T) {
 		{Type: TokenDot},
 		{Type: TokenIdentifier, Raw: []byte("set")},
 		{Type: TokenParenthesesOpen},
-		{Type: TokenIdentifier, Raw: []byte{'k'}},
+		{Type: TokenIdentifier, Raw: []byte{'v'}},
 		{Type: TokenEqual},
-		{Type: TokenString, Raw: []byte{'0'}},
+		{Type: TokenNumber, Raw: []byte{'4'}},
 		{Type: TokenReduction},
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenParenthesesClose},
@@ -243,7 +243,7 @@ func TestNewerStmt_call(t *testing.T) {
 	if val.Type != ValueInt {
 		t.Fatal("call fatal")
 	}
-	if rv, _ := val.Value.(Inter).Int(); rv != 4 {
+	if rv, _ := val.Value.(Inter).Int(); rv != 5 {
 		t.Fatal("call fatal")
 	}
 }

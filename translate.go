@@ -32,7 +32,7 @@ func NewTranslator(e Encoder, opts ...func(*translator)) *translator {
 func (t translator) Translate(r io.Reader, w io.Writer) (int, error) {
 	scanner := NewTokenScanner(NewLexer(r, t.bufSize))
 	scanner.PushEnds(TokenSemicolon)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenSemicolon)
 	vars := NewContext()
 	stmt := NewStmt(scanner, vars)
 	var val Value

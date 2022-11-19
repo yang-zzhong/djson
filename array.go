@@ -71,13 +71,11 @@ func getArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err 
 func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
-		scanner.PushEnds(TokenParenthesesClose)
-		defer scanner.PopEnds(1)
 		expr := NewStmt(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
@@ -91,7 +89,7 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
 	offset := scanner.Offset()
 	scanner.PushEnds(TokenParenthesesClose)
-	defer scanner.PopEnds(1)
+	defer scanner.PopEnds(TokenParenthesesClose)
 	o.Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
@@ -230,7 +228,7 @@ func (e *arrayExecutor) execute() (err error) {
 func (e *arrayExecutor) items() (val Array, err error) {
 	arr := NewArray()
 	e.scanner.PushEnds(TokenBracketsClose, TokenComma)
-	defer e.scanner.PopEnds(2)
+	defer e.scanner.PopEnds(TokenBracketsClose, TokenComma)
 	e.vars.pushMe(ArrayValue(arr))
 	defer e.vars.popMe()
 	for {

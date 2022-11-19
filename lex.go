@@ -31,6 +31,10 @@ type TokenMatcher interface {
 	Token() *Token
 }
 
+type SourceReplacer interface {
+	ReplaceSource(io.Reader, int)
+}
+
 type Buffer interface {
 	Take([]byte) (int, error)
 	TakeBack()
