@@ -14,7 +14,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		{Type: TokenMinus},
 		{Type: TokenNumber, Raw: []byte{'1'}},
 	})
-	expr := NewStmt(NewTokenScanner(g), nil)
+	expr := NewStmtExecutor(NewTokenScanner(g), nil)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = NewStmt(NewTokenScanner(g), nil)
+	expr = NewStmtExecutor(NewTokenScanner(g), nil)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		{Type: TokenMultiplication},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	expr = NewStmt(NewTokenScanner(g), nil)
+	expr = NewStmtExecutor(NewTokenScanner(g), nil)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("world")},
 	})
-	expr = NewStmt(NewTokenScanner(g), nil)
+	expr = NewStmtExecutor(NewTokenScanner(g), nil)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestNewerStmt_assignation(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := NewContext()
-	expr := NewStmt(NewTokenScanner(g), vs)
+	expr := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestNewerStmt_assignationWithReduction(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
 	vs := NewContext()
-	expr := NewStmt(NewTokenScanner(g), vs)
+	expr := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestNewerStmt_assignationWithReduction(t *testing.T) {
 	g.tokens[2] = &Token{Type: TokenFalse}
 	g.offset = 0
 	vs = NewContext()
-	expr = NewStmt(NewTokenScanner(g), vs)
+	expr = NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestNewerStmt_objectOperate(t *testing.T) {
 		{Type: TokenBraceClose},
 	})
 	vs := NewContext()
-	expr := NewStmt(NewTokenScanner(g), vs)
+	expr := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestNewerStmt_objectCall(t *testing.T) {
 		{Type: TokenParenthesesClose},
 	})
 	vs := NewContext()
-	stmt := NewStmt(NewTokenScanner(g), vs)
+	stmt := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestNewerStmt_call(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenParenthesesClose},
 	})
-	stmt := NewStmt(NewTokenScanner(g), NewContext())
+	stmt := NewStmtExecutor(NewTokenScanner(g), NewContext())
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func BenchmarkNewerStmt_arithmatic(b *testing.B) {
 			{Type: TokenReduction},
 			{Type: TokenString, Raw: []byte("hello world")},
 		})
-		stmt := NewStmt(NewTokenScanner(g), nil)
+		stmt := NewStmtExecutor(NewTokenScanner(g), nil)
 		if err := stmt.Execute(); err != nil {
 			b.Fatal(err)
 		}

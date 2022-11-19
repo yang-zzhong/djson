@@ -18,7 +18,7 @@ func TestMapRange(t *testing.T) {
 		{Type: TokenIdentifier, Raw: []byte{'v'}},
 		{Type: TokenParenthesesClose},
 	}))
-	s := NewStmt(scanner, NewContext())
+	s := NewStmtExecutor(scanner, NewContext())
 	if err := s.Execute(); err != nil {
 		t.Fatal(err)
 	}

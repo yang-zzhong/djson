@@ -105,7 +105,7 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 		nexter.SetOffset(offset)
 		vars.Assign([]byte{'k'}, StringValue(k...))
 		vars.Assign([]byte{'v'}, val)
-		expr := NewStmt(nexter, vars)
+		expr := NewStmtExecutor(nexter, vars)
 		if err = expr.Execute(); err != nil {
 			return false
 		}
@@ -129,7 +129,7 @@ func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k [
 		nexter.SetOffset(offset)
 		vars.Assign([]byte{'k'}, StringValue(k...))
 		vars.Assign([]byte{'v'}, val)
-		expr := NewStmt(nexter, vars)
+		expr := NewStmtExecutor(nexter, vars)
 		if err = expr.Execute(); err != nil {
 			return false
 		}
@@ -292,7 +292,7 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 	e.vars.pushMe(ObjectValue(val))
 	defer e.vars.popMe()
 	for {
-		expr := NewStmt(e.scanner, e.vars)
+		expr := NewStmtExecutor(e.scanner, e.vars)
 		func() {
 			e.scanner.PushEnds(TokenColon)
 			defer e.scanner.PopEnds(TokenColon)
@@ -309,7 +309,7 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 		func() {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
 			defer e.scanner.PopEnds(TokenComma, TokenBraceClose)
-			expr = NewStmt(e.scanner, e.vars)
+			expr = NewStmtExecutor(e.scanner, e.vars)
 			if err = expr.Execute(); err != nil {
 				return
 			}

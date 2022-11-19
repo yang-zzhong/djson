@@ -76,7 +76,7 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
-		expr := NewStmt(scanner, vars)
+		expr := NewStmtExecutor(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
 		}
@@ -94,7 +94,7 @@ func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val 
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
-		expr := NewStmt(scanner, vars)
+		expr := NewStmtExecutor(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
 		}
@@ -232,7 +232,7 @@ func (e *arrayExecutor) items() (val Array, err error) {
 	e.vars.pushMe(ArrayValue(arr))
 	defer e.vars.popMe()
 	for {
-		expr := NewStmt(e.scanner, e.vars)
+		expr := NewStmtExecutor(e.scanner, e.vars)
 		if err = expr.Execute(); err != nil {
 			return
 		}

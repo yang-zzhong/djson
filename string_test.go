@@ -15,7 +15,7 @@ func TestString_Index(t *testing.T) {
 		{Type: TokenString, Raw: []byte("world")},
 		{Type: TokenParenthesesClose},
 	}))
-	stmt := NewStmt(scanner, NewContext())
+	stmt := NewStmtExecutor(scanner, NewContext())
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestString_Match(t *testing.T) {
 		{Type: TokenString, Raw: []byte("world$")},
 		{Type: TokenParenthesesClose},
 	}))
-	stmt := NewStmt(scanner, NewContext())
+	stmt := NewStmtExecutor(scanner, NewContext())
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestString_sub(t *testing.T) {
 		{Type: TokenBracketsClose},
 		{Type: TokenParenthesesClose},
 	}))
-	stmt := NewStmt(scanner, NewContext())
+	stmt := NewStmtExecutor(scanner, NewContext())
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
 	}
