@@ -6,38 +6,44 @@ import (
 	"io"
 )
 
+// MatchStatus match status for Matcher.Match
 type MatchStatus int
 
 const (
-	Matching = MatchStatus(iota)
-	Match
-	NotMatch
-	Matched
+	Matching = MatchStatus(iota) // token matched the current byte but maybe unmatch for any of incoming byte
+	Match                        // token totally matched
+	NotMatch                     // token not match
+	Matched                      // token matched before the current byte
 
-	stashSize = 256
+	stashSize = 256 // the history of the matching bytes
 )
 
+// Lexer is a tool for analysis byte stream and get the matched token
 type Lexer interface {
 	NextToken(token *Token) error
 }
 
+// Stash hold the history of the current matching process
 type Stash interface {
-	Len() int
-	CopyTo(bs []byte, start int)
+	Len() int                    // history bytes length
+	CopyTo(bs []byte, start int) // copy the stash to ather []byte
 }
 
+// TokenMatcher a matching tool for specific token
 type TokenMatcher interface {
-	Match(b byte, stash Stash) MatchStatus
-	Token() *Token
+	Match(b byte, stash Stash) MatchStatus // match byte and stash for a token
+	Token() *Token                         // get the token of the matcher
 }
 
+// SourceReplacer replace source for the Lexer
 type SourceReplacer interface {
 	ReplaceSource(io.Reader, int)
 }
 
+// Buffer a read buffer for lexer
 type Buffer interface {
-	Take([]byte) (int, error)
-	TakeBack()
+	Take([]byte) (int, error) // get []byte from the buffer
+	TakeBack()                // put the last take back for some reason, such as token matched with Matched status returned
 }
 
 type buffer struct {
@@ -48,6 +54,7 @@ type buffer struct {
 	total        int
 }
 
+// NewBuffer new a buffer from a reader and a buffer size
 func NewBuffer(r io.Reader, size int) Buffer {
 	return &buffer{
 		r:  r,
@@ -55,6 +62,7 @@ func NewBuffer(r io.Reader, size int) Buffer {
 	}
 }
 
+// read the underlying bytes
 func (b *buffer) read() (err error) {
 	b.total, err = b.r.Read(b.bs)
 	if err != nil {
@@ -64,6 +72,7 @@ func (b *buffer) read() (err error) {
 	return
 }
 
+// Take get []byte from the buffer
 func (b *buffer) Take(bs []byte) (taked int, err error) {
 	if b.total == 0 || b.offset == b.total {
 		if err = b.read(); err != nil {
@@ -76,6 +85,7 @@ func (b *buffer) Take(bs []byte) (taked int, err error) {
 	return
 }
 
+// TakeBack put the last take back for some reason, such as token matched with Matched status returned
 func (b *buffer) TakeBack() {
 	b.offset -= b.lastTakeSize
 	b.lastTakeSize = 0
@@ -86,10 +96,12 @@ type charsMatcher struct {
 	token Token
 }
 
+// CharsMatcher match the specific chars
 func CharsMatcher(chars []byte, tokenType TokenType) TokenMatcher {
 	return &charsMatcher{chars: chars, token: Token{Type: tokenType}}
 }
 
+// Match match current byte and stash
 func (m *charsMatcher) Match(b byte, stash Stash) MatchStatus {
 	sl := stash.Len()
 	if sl == len(m.chars) {
@@ -101,6 +113,7 @@ func (m *charsMatcher) Match(b byte, stash Stash) MatchStatus {
 	return NotMatch
 }
 
+// Token get the token associates the matcher
 func (m *charsMatcher) Token() *Token {
 	return &m.token
 }
@@ -109,10 +122,12 @@ type identifierMatcher struct {
 	token Token
 }
 
+// IdentifierMatcher for matching identifier
 func IdentifierMatcher() TokenMatcher {
 	return &identifierMatcher{token: Token{Type: TokenIdentifier}}
 }
 
+// Match implement tokenMatcher.Match
 func (m *identifierMatcher) Match(b byte, stash Stash) MatchStatus {
 	sl := stash.Len()
 	if sl == 0 && (isAlpha(b) || b == '_') || sl > 0 && isVarChar(b) {
@@ -125,6 +140,7 @@ func (m *identifierMatcher) Match(b byte, stash Stash) MatchStatus {
 	return NotMatch
 }
 
+// Token implement tokenMatcher.Token
 func (m *identifierMatcher) Token() *Token {
 	return &m.token
 }
@@ -133,6 +149,7 @@ type whitespaceMatcher struct {
 	token Token
 }
 
+// IdentifierMatcher for matching whitespace
 func WhitespaceMatcher() TokenMatcher {
 	return &whitespaceMatcher{Token{Type: TokenWhitespace}}
 }
@@ -155,6 +172,7 @@ type numberMatcher struct {
 	token Token
 }
 
+// IdentifierMatcher for matching number
 func NumberMatcher() TokenMatcher {
 	return &numberMatcher{Token{Type: TokenNumber}}
 }
@@ -181,6 +199,7 @@ type stringMatcher struct {
 	slashed bool
 }
 
+// IdentifierMatcher for matching string
 func StringMatcher() TokenMatcher {
 	return &stringMatcher{token: Token{Type: TokenString}}
 }
@@ -211,6 +230,7 @@ type eofMatcher struct {
 	token Token
 }
 
+// IdentifierMatcher for matching eof
 func EOFMatcher() TokenMatcher {
 	return &eofMatcher{token: Token{Type: TokenEOF}}
 }
@@ -230,6 +250,7 @@ type commentMatcher struct {
 	token Token
 }
 
+// IdentifierMatcher for matching comment
 func CommentMatcher() TokenMatcher {
 	return &commentMatcher{Token{Type: TokenComment}}
 }
@@ -281,10 +302,12 @@ func (s *stash) reset() {
 	s.offset = 0
 }
 
+// Len implement stash.Len
 func (s *stash) Len() int {
 	return s.offset
 }
 
+// Len implement stash.CopyTo
 func (s *stash) CopyTo(bs []byte, start int) {
 	copy(bs, s.buf[start:])
 }
@@ -299,6 +322,7 @@ type lexer struct {
 	includeMatchers        int
 }
 
+// NewLexer new a Lexer
 func NewLexer(source io.Reader, bufSize uint) *lexer {
 	return &lexer{
 		buf:   NewBuffer(source, int(bufSize)),
@@ -399,6 +423,22 @@ func (g *lexer) ReplaceSource(source io.Reader, bufSize int) {
 	g.buf = NewBuffer(source, bufSize)
 }
 
+// NextToken let's take a look on the implementation. the structure like below
+//
+// ```
+//      matched token
+//     <---------+                    +----------+   +--> Match
+//               |                  +----------+ |   |--> Token
+//      +------------------+       +---------+ |_+----+
+//   +->| candidate tokens |       | matcher |-+
+//   |  +------------------+       +---------+
+//   |  +------------------+             |
+//   +--| filtered matcher | <-----------+
+//      +------------------+
+//               |
+//               |
+//             bytes
+// ```
 func (g *lexer) NextToken(token *Token) error {
 nextToken:
 	g.tokenAtCol = g.col

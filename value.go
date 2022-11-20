@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+// TypeConverter a type converter which converts the type to string,[]byte,bool,int,flaot
 type TypeConverter interface {
 	Stringer
 	Byter
@@ -14,10 +15,16 @@ type TypeConverter interface {
 	Floater
 }
 
+// Comparable compare with a Value
 type Comparable interface {
+	// Compare to a Value
+	// if -1 returned, it indicates less than the Value
+	// if 0 returned, it indicates equal to the Value
+	// if 1 returned, it indicates great than the Value
 	Compare(Value) (int, error)
 }
 
+// Arithmacable a simple arithmatic able interface
 type Arithmacable interface {
 	Add(Value) (Value, error)
 	Minus(Value) (Value, error)
@@ -49,6 +56,7 @@ type Value struct {
 	p     *Value
 }
 
+// TypeName get a type name for a value
 func (val Value) TypeName() string {
 	return map[ValueType]string{
 		ValueNull:       "null",
@@ -62,38 +70,109 @@ func (val Value) TypeName() string {
 	}[val.Type]
 }
 
+// IntValue return a Int Value
 func IntValue(v int64) Value {
 	return Value{Type: ValueInt, Value: Int(v)}
 }
 
+// FloatValue return a Float Value
 func FloatValue(v float64) Value {
 	return Value{Type: ValueFloat, Value: Float(v)}
 }
 
+// StringValue return a String Value
 func StringValue(v ...byte) Value {
 	return Value{Type: ValueString, Value: NewString(v...)}
 }
 
+// ObjectValue return a Object Value
 func ObjectValue(o Object) Value {
 	return Value{Type: ValueObject, Value: o}
 }
 
+// ArrayValue return a Array Value
 func ArrayValue(a Array) Value {
 	return Value{Type: ValueArray, Value: a}
 }
 
+// BoolValue return a Bool Value
 func BoolValue(b bool) Value {
 	return Value{Type: ValueBool, Value: Bool(b)}
 }
 
+// RangeValue return a Range Value
 func RangeValue(begin, end int) Value {
 	return Value{Type: ValueRange, Value: NewRange(begin, end)}
 }
 
+// NullValue return a Null Value
 func NullValue() Value {
 	return Value{Type: ValueNull}
 }
 
+// Int convert the value to int64
+func (val Value) Int() (ret int64, err error) {
+	val = val.realValue()
+	if inter, ok := val.Value.(Inter); ok {
+		return inter.Int()
+	}
+	err = fmt.Errorf("value of type [%s] can't cast to int64", val.TypeName())
+	return
+}
+
+// Float convert the value to float64
+func (val Value) Float() (ret float64, err error) {
+	val = val.realValue()
+	if floater, ok := val.Value.(Floater); ok {
+		return floater.Float()
+	}
+	err = fmt.Errorf("value of type [%s] can't cast to float64", val.TypeName())
+	return
+}
+
+// String convert the value to string
+func (val Value) String() string {
+	val = val.realValue()
+	if val.Value == nil {
+		return "nil"
+	}
+	if stringer, ok := val.Value.(Stringer); ok {
+		return stringer.String()
+	}
+	return val.TypeName()
+}
+
+// Bytes convert the value to []byte
+func (val Value) Bytes() []byte {
+	val = val.realValue()
+	if val.Value == nil {
+		return []byte{'n', 'i', 'l'}
+	}
+	if stringer, ok := val.Value.(Byter); ok {
+		return stringer.Bytes()
+	}
+	return []byte(val.TypeName())
+}
+
+// MustInt convert the value to int64, if can't, will panic
+func (val Value) MustInt() int64 {
+	v, err := val.Int()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// MustFloat convert the value to float64, if can't, will panic
+func (val Value) MustFloat() float64 {
+	v, err := val.Float()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Copy a Value
 func (val Value) Copy() Value {
 	switch val.Type {
 	case ValueFloat, ValueInt, ValueBool, ValueNull:
@@ -173,17 +252,6 @@ func (left Value) Compare(right Value) (ret int, err error) {
 		return
 	}
 	return com.Compare(right)
-}
-
-func (val Value) String() string {
-	val = val.realValue()
-	if val.Value == nil {
-		return "nil"
-	}
-	if stringer, ok := val.Value.(Stringer); ok {
-		return stringer.String()
-	}
-	return val.TypeName()
 }
 
 func (left Value) Equal(right Value) bool {
