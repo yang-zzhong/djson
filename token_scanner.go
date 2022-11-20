@@ -1,10 +1,5 @@
 package djson
 
-type tokens struct {
-	tokens []*Token
-	total  int
-}
-
 type endsWhen struct {
 	when map[TokenType]int
 }

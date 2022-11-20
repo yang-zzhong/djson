@@ -96,12 +96,12 @@ func TestString_arithmatic(t *testing.T) {
 	}
 	// multiply
 	a = NewString('h')
-	if val, err = a.Multiply(StringValue('e')); err == nil {
+	if _, err = a.Multiply(StringValue('e')); err == nil {
 		t.Fatal("h * e should error")
 	}
 	// devide
 	a = NewString('h')
-	if val, err = a.Devide(StringValue('e')); err == nil {
+	if _, err = a.Devide(StringValue('e')); err == nil {
 		t.Fatal("h / e should error")
 	}
 }

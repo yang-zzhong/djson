@@ -327,6 +327,8 @@ func NewLexer(source io.Reader, bufSize uint) *lexer {
 	return &lexer{
 		buf:   NewBuffer(source, int(bufSize)),
 		bs:    make([]byte, 1),
+		row:   1,
+		col:   1,
 		stash: newStash(stashSize),
 		matcherStatuses: []*tokenMatcherStatus{
 			{matcher: CharsMatcher([]byte{'{'}, TokenBraceOpen)},
@@ -509,7 +511,7 @@ func (g *lexer) match(cs *candidates, newc *[]candidate) {
 func (g *lexer) forwardChar(b byte) {
 	if b == '\n' {
 		g.row++
-		g.col = 0
+		g.col = 1
 	} else {
 		g.col++
 	}

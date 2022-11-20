@@ -291,21 +291,30 @@ func Range(scanner TokenScanner) *stmt {
 		}
 		matched = true
 		scanner.Forward()
-		if val.Type != ValueInt {
+		var begin, end int64
+		if inter, ok := val.Value.(Inter); ok {
+			if begin, err = inter.Int(); err != nil {
+				err = fmt.Errorf("can't convert to int for range begin: %w", err)
+				return
+			}
+		} else {
 			err = errors.New("range ... must follow an int and be followed by an int too")
 			return
 		}
-		begin, _ := val.Value.(Inter).Int()
 		var right Value
 		right, err = e.next.Value(val)
 		if err != nil {
 			return
 		}
-		if right.Type != ValueInt {
+		if inter, ok := right.Value.(Inter); ok {
+			if end, err = inter.Int(); err != nil {
+				err = fmt.Errorf("can't convert to int for range end: %w", err)
+				return
+			}
+		} else {
 			err = errors.New("range ... must follow an int and be followed by an int too")
 			return
 		}
-		end, _ := right.Value.(Inter).Int()
 		ret = RangeValue(int(begin), int(end))
 		return
 	}
