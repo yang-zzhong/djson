@@ -7,6 +7,10 @@ import (
 	"strconv"
 )
 
+var (
+	errExit = errors.New("__exit__")
+)
+
 type stmt struct {
 	next    *stmt                                                              // next stmt should try, the priority of this stmt is always lower than next
 	name    string                                                             // stmt name
@@ -50,6 +54,10 @@ func (e *stmt) Value(val Value) (ret Value, err error) {
 			return
 		}
 	}
+}
+
+func Exit() {
+	panic(errExit)
 }
 
 func Assign(scanner TokenScanner) *stmt {
@@ -241,6 +249,24 @@ func MultiplyOrDevide(scanner TokenScanner) *stmt {
 	return e
 }
 
+func Mod(scanner TokenScanner) *stmt {
+	e := &stmt{scanner: scanner, name: "Mod"}
+	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+		if token.Type != TokenMod {
+			return
+		}
+		matched = true
+		scanner.Forward()
+		var term Value
+		if term, err = e.next.Value(val); err != nil {
+			return
+		}
+		ret, err = val.Mod(term)
+		return
+	}
+	return e
+}
+
 func Call(scanner TokenScanner, ctx Context) *stmt {
 	e := &stmt{scanner: scanner, name: "Call"}
 	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
@@ -331,6 +357,8 @@ func Factor(scanner TokenScanner, ctx Context) *stmt {
 				name: token.Raw,
 				vars: ctx,
 			}}
+		case TokenExit:
+			Exit()
 		case TokenTrue:
 			ret = BoolValue(true)
 		case TokenFalse:
@@ -387,6 +415,7 @@ type stmtExecutor struct {
 	expr    *stmt
 	value   Value
 	opt     *option
+	exited  bool
 }
 
 type option struct {
@@ -430,6 +459,15 @@ func (ns *stmtExecutor) Execute() (err error) {
 			ns.scanner.Forward()
 		}
 	}()
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok && errors.Is(err, errExit) {
+				ns.exited = true
+				return
+			}
+			panic(r)
+		}
+	}()
 	var end bool
 	for {
 		if end, err = ns.scanner.Scan(); end || err != nil {
@@ -439,6 +477,10 @@ func (ns *stmtExecutor) Execute() (err error) {
 			return
 		}
 	}
+}
+
+func (ns *stmtExecutor) Exited() bool {
+	return ns.exited
 }
 
 func (ns *stmtExecutor) Value() Value {

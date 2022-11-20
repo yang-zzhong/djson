@@ -37,7 +37,9 @@ const (
 	TokenString                             // string
 	TokenRange                              // ... // [1 ... 10].map({"key": "" + v + "_x"})
 	TokenIdentifier                         // identifier
-	TokenWhitespace
+	TokenWhitespace                         // whitespace
+	TokenMod                                // %
+	TokenExit                               // exit
 )
 
 type Token struct {

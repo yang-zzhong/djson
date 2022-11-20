@@ -48,6 +48,8 @@ const (
 	ValueBool
 	ValueIdentifier
 	ValueRange
+	ValueCallable
+	ValueExit
 )
 
 type Value struct {
@@ -100,6 +102,10 @@ func BoolValue(b bool) Value {
 	return Value{Type: ValueBool, Value: Bool(b)}
 }
 
+func CallableValue(c callable) Value {
+	return Value{Type: ValueCallable, Value: c}
+}
+
 // RangeValue return a Range Value
 func RangeValue(begin, end int) Value {
 	return Value{Type: ValueRange, Value: NewRange(begin, end)}
@@ -108,6 +114,10 @@ func RangeValue(begin, end int) Value {
 // NullValue return a Null Value
 func NullValue() Value {
 	return Value{Type: ValueNull}
+}
+
+func ExitValue() Value {
+	return Value{Type: ValueExit}
 }
 
 // Int convert the value to int64
@@ -260,6 +270,18 @@ func (left Value) Equal(right Value) bool {
 		return false
 	}
 	return c == 0
+}
+
+func (left Value) Mod(right Value) (val Value, err error) {
+	var lv, rv int64
+	if lv, err = left.Int(); err != nil {
+		return
+	}
+	if rv, err = right.Int(); err != nil {
+		return
+	}
+	val = IntValue(lv % rv)
+	return
 }
 
 func (left Value) And(right Value) Value {

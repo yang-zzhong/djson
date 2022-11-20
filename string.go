@@ -140,6 +140,9 @@ func indexString(val Value, scanner TokenScanner, vars Context) (ret Value, err 
 	if err = stmt.Execute(); err != nil {
 		return
 	}
+	if stmt.Exited() {
+		Exit()
+	}
 	if stmt.value.Type != ValueString {
 		err = errors.New("string match only accept a string as the regexp")
 		return
@@ -156,6 +159,9 @@ func subString(val Value, scanner TokenScanner, vars Context) (ret Value, err er
 	stmt := NewStmtExecutor(scanner, vars)
 	if err = stmt.Execute(); err != nil {
 		return
+	}
+	if stmt.Exited() {
+		Exit()
 	}
 	if !(stmt.value.Type == ValueArray && stmt.value.Value.(Array).Total() == 2) {
 		err = errors.New("string sub only accept a [start, end] as the range")
@@ -198,6 +204,9 @@ func matchString(val Value, scanner TokenScanner, vars Context) (ret Value, err 
 	stmt := NewStmtExecutor(scanner, vars)
 	if err = stmt.Execute(); err != nil {
 		return
+	}
+	if stmt.Exited() {
+		Exit()
 	}
 	if stmt.value.Type != ValueString {
 		err = errors.New("string match only accept a string as the regexp")

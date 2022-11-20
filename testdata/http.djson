@@ -1,0 +1,17 @@
+# http test
+
+req = {
+    "url": "https://baidu.com",
+    "header": {
+        "Content-Type": "application/json",
+    },
+    "body": {
+        "hello": "world"
+    }
+};
+
+res = _http.get(req).if(_me.responseCode != 200 => exit).body;
+
+1 == 2 => exit;
+
+[1 ... 10].get({"key": i, "val": v}).set(i % 2 == 0 => v +{"odd": "!odd"});

@@ -80,6 +80,9 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 		if err = expr.Execute(); err != nil {
 			return false
 		}
+		if expr.Exited() {
+			Exit()
+		}
 		err = handle(expr.value, i)
 		return err == nil
 	})
@@ -97,6 +100,9 @@ func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val 
 		expr := NewStmtExecutor(scanner, vars)
 		if err = expr.Execute(); err != nil {
 			return false
+		}
+		if expr.Exited() {
+			Exit()
 		}
 		if !expr.value.Bool() {
 			return true
@@ -235,6 +241,9 @@ func (e *arrayExecutor) items() (val Array, err error) {
 		expr := NewStmtExecutor(e.scanner, e.vars)
 		if err = expr.Execute(); err != nil {
 			return
+		}
+		if expr.Exited() {
+			Exit()
 		}
 		if expr.value.Type == ValueRange {
 			val = expr.value.Value.(Array)

@@ -109,6 +109,9 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 		if err = expr.Execute(); err != nil {
 			return false
 		}
+		if expr.Exited() {
+			Exit()
+		}
 		p := expr.value
 		if p.Type == ValueNull {
 			p = val
@@ -132,6 +135,9 @@ func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k [
 		expr := NewStmtExecutor(nexter, vars)
 		if err = expr.Execute(); err != nil {
 			return false
+		}
+		if expr.Exited() {
+			Exit()
 		}
 		if !expr.value.Bool() {
 			return true
@@ -298,6 +304,9 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 			defer e.scanner.PopEnds(TokenColon)
 			err = expr.Execute()
 		}()
+		if expr.Exited() {
+			Exit()
+		}
 		if err != nil || expr.value.Type == ValueNull {
 			return
 		}
@@ -310,10 +319,11 @@ func (e *objectExecutor) pairs() (val Object, err error) {
 			e.scanner.PushEnds(TokenComma, TokenBraceClose)
 			defer e.scanner.PopEnds(TokenComma, TokenBraceClose)
 			expr = NewStmtExecutor(e.scanner, e.vars)
-			if err = expr.Execute(); err != nil {
-				return
-			}
+			expr.Execute()
 		}()
+		if expr.Exited() {
+			Exit()
+		}
 		if err != nil {
 			return
 		}

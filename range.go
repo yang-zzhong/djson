@@ -27,11 +27,14 @@ func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
-		expr := NewStmtExecutor(scanner, vars)
-		if err = expr.Execute(); err != nil {
+		stmt := NewStmtExecutor(scanner, vars)
+		if err = stmt.Execute(); err != nil {
 			return false
 		}
-		r.Append(expr.value)
+		if stmt.Exited() {
+			Exit()
+		}
+		r.Append(stmt.value)
 		return true
 	})
 	ret = Value{Type: ValueArray, Value: r}
