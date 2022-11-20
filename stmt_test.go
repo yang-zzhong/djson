@@ -7,7 +7,7 @@ import (
 
 func TestNewerStmt_arithmatic(t *testing.T) {
 	// 5 + 2 - 1
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
@@ -25,7 +25,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		t.Fatal("5 + 2 - 1 failed")
 	}
 	// 5 + 2 * 3
-	g = newLexMock([]*Token{
+	g = NewLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'2'}},
@@ -43,7 +43,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		t.Fatal("5 + 2 * 3 failed")
 	}
 	// (5 + 2) * 3
-	g = newLexMock([]*Token{
+	g = NewLexMock([]*Token{
 		{Type: TokenParenthesesOpen},
 		{Type: TokenNumber, Raw: []byte{'5'}},
 		{Type: TokenAddition},
@@ -63,7 +63,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 		t.Fatal("(5 + 2) * 3 failed")
 	}
 	// "hello" + "world"
-	g = newLexMock([]*Token{
+	g = NewLexMock([]*Token{
 		{Type: TokenString, Raw: []byte("hello")},
 		{Type: TokenAddition},
 		{Type: TokenString, Raw: []byte("world")},
@@ -79,7 +79,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 
 func TestNewerStmt_assignation(t *testing.T) {
 	// a = 5 + 3
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
 		{Type: TokenAssignation},
 		{Type: TokenNumber, Raw: []byte{'5'}},
@@ -102,7 +102,7 @@ func TestNewerStmt_assignation(t *testing.T) {
 
 func TestNewerStmt_assignationWithReduction(t *testing.T) {
 	// a = true => 5 + 3
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
 		{Type: TokenAssignation},
 		{Type: TokenTrue},
@@ -139,7 +139,7 @@ func TestNewerStmt_assignationWithReduction(t *testing.T) {
 
 func TestNewerStmt_objectOperate(t *testing.T) {
 	// {"hello": "world"} + {"world": "hello"}
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("hello")},
 		{Type: TokenColon},
@@ -173,7 +173,7 @@ func TestNewerStmt_objectOperate(t *testing.T) {
 
 func TestNewerStmt_objectCall(t *testing.T) {
 	// {"hello": "world"}.set(k == "hello" => v + " ^_^")
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("hello")},
 		{Type: TokenColon},
@@ -207,7 +207,7 @@ func TestNewerStmt_objectCall(t *testing.T) {
 
 func TestNewerStmt_call(t *testing.T) {
 	// {"0": 1}.set(k == "0" => 4).set(v == 4 => 5)
-	g := newLexMock([]*Token{
+	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("0")},
 		{Type: TokenColon},
@@ -251,7 +251,7 @@ func TestNewerStmt_call(t *testing.T) {
 func BenchmarkNewerStmt_arithmatic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// ((5 + 2) * 3 == 21) || false => "hello world"
-		g := newLexMock([]*Token{
+		g := NewLexMock([]*Token{
 			{Type: TokenParenthesesOpen},
 			{Type: TokenParenthesesOpen},
 			{Type: TokenNumber, Raw: []byte{'5'}},

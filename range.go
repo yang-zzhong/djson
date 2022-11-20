@@ -5,16 +5,16 @@ import "fmt"
 type range_ struct {
 	from int
 	to   int
-	*callableImp
+	*CallableRegister
 }
 
 func NewRange(from, to int) *range_ {
 	rg := &range_{
-		from:        from,
-		to:          to,
-		callableImp: newCallable("range"),
+		from:             from,
+		to:               to,
+		CallableRegister: NewCallableRegister("range"),
 	}
-	rg.register("map", mapRange)
+	rg.RegisterCall("map", mapRange)
 	return rg
 }
 

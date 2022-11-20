@@ -9,7 +9,7 @@ func TestArray_set(t *testing.T) {
 		IntValue(int64(2)),
 		IntValue(int64(3)),
 	)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
 		{Type: TokenEqual},
 		{Type: TokenNumber, Raw: []byte{'0'}},
@@ -41,7 +41,7 @@ func TestArray_del(t *testing.T) {
 		IntValue(int64(2)),
 		IntValue(int64(3)),
 	)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
 		{Type: TokenEqual},
 		{Type: TokenNumber, Raw: []byte{'0'}},
@@ -63,7 +63,7 @@ func TestArray_get(t *testing.T) {
 		IntValue(int64(2)),
 		IntValue(int64(3)),
 	)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'i'}},
 		{Type: TokenGreateThan},
 		{Type: TokenNumber, Raw: []byte{'1'}},

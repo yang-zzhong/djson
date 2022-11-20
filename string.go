@@ -27,16 +27,16 @@ type String interface {
 
 type str struct {
 	bytes []byte
-	*callableImp
+	*CallableRegister
 }
 
 var _ String = &str{}
 
 func NewString(bs ...byte) *str {
-	s := &str{bytes: bs, callableImp: newCallable("string")}
-	s.register("index", indexString)
-	s.register("match", matchString)
-	s.register("sub", subString)
+	s := &str{bytes: bs, CallableRegister: NewCallableRegister("string")}
+	s.RegisterCall("index", indexString)
+	s.RegisterCall("match", matchString)
+	s.RegisterCall("sub", subString)
 	return s
 }
 

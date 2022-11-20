@@ -9,7 +9,7 @@ func TestObject_set(t *testing.T) {
 		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: Int(int64(2))}},
 		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: Int(int64(3))}},
 	)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'k'}},
 		{Type: TokenEqual},
 		{Type: TokenString, Raw: []byte{'0'}},
@@ -40,7 +40,7 @@ func TestObject_del(t *testing.T) {
 		&pair{key: []byte{'1'}, val: Value{Type: ValueInt, Value: Int(int64(2))}},
 		&pair{key: []byte{'2'}, val: Value{Type: ValueInt, Value: Int(int64(3))}},
 	)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'k'}},
 		{Type: TokenEqual},
 		{Type: TokenString, Raw: []byte{'0'}},

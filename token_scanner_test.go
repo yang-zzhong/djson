@@ -3,7 +3,7 @@ package djson
 import "testing"
 
 func TestTokenScanner_next(t *testing.T) {
-	lex := newLexMock([]*Token{
+	lex := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte("data"), Row: 1, Col: 0},
 		{Type: TokenAssignation, Row: 1, Col: 5},
 		{Type: TokenBraceOpen, Row: 1, Col: 7},

@@ -4,7 +4,7 @@ import "testing"
 
 func TestMapRange(t *testing.T) {
 	// [1 ... 10].map(i + v)
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenBracketsOpen},
 		{Type: TokenNumber, Raw: []byte{'1'}},
 		{Type: TokenRange},

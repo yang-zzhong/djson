@@ -584,7 +584,7 @@ func (g *lexmock) NextToken(token *Token) error {
 	return nil
 }
 
-func newLexMock(tokens []*Token) *lexmock {
+func NewLexMock(tokens []*Token) *lexmock {
 	return &lexmock{
 		tokens: tokens,
 	}

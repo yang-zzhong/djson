@@ -20,7 +20,6 @@ var _ Context = &ctx{}
 
 func NewContext(vars ...Variable) *ctx {
 	ret := ctx(vars)
-	ret.Assign([]byte{'_', 'h', 't', 't', 'p'}, CallableValue(NewHttp()))
 	return &ret
 }
 

@@ -102,7 +102,7 @@ func BoolValue(b bool) Value {
 	return Value{Type: ValueBool, Value: Bool(b)}
 }
 
-func CallableValue(c callable) Value {
+func CallableValue(c Callable) Value {
 	return Value{Type: ValueCallable, Value: c}
 }
 
@@ -122,7 +122,7 @@ func ExitValue() Value {
 
 // Int convert the value to int64
 func (val Value) Int() (ret int64, err error) {
-	val = val.realValue()
+	val = val.RealValue()
 	if inter, ok := val.Value.(Inter); ok {
 		return inter.Int()
 	}
@@ -132,7 +132,7 @@ func (val Value) Int() (ret int64, err error) {
 
 // Float convert the value to float64
 func (val Value) Float() (ret float64, err error) {
-	val = val.realValue()
+	val = val.RealValue()
 	if floater, ok := val.Value.(Floater); ok {
 		return floater.Float()
 	}
@@ -142,7 +142,7 @@ func (val Value) Float() (ret float64, err error) {
 
 // String convert the value to string
 func (val Value) String() string {
-	val = val.realValue()
+	val = val.RealValue()
 	if val.Value == nil {
 		return "nil"
 	}
@@ -154,7 +154,7 @@ func (val Value) String() string {
 
 // Bytes convert the value to []byte
 func (val Value) Bytes() []byte {
-	val = val.realValue()
+	val = val.RealValue()
 	if val.Value == nil {
 		return []byte{'n', 'i', 'l'}
 	}
@@ -197,7 +197,7 @@ func (val Value) Copy() Value {
 	return val
 }
 
-func (left Value) realValue() (val Value) {
+func (left Value) RealValue() (val Value) {
 	if left.Type == ValueIdentifier {
 		val = left.Value.(Identifier).Value()
 		return
@@ -207,8 +207,8 @@ func (left Value) realValue() (val Value) {
 }
 
 func (left Value) Add(right Value) (val Value, err error) {
-	left = left.realValue()
-	right = right.realValue()
+	left = left.RealValue()
+	right = right.RealValue()
 	addable, ok := left.Value.(Arithmacable)
 	if !ok {
 		err = fmt.Errorf("can't + [%s] with [%s]", left.TypeName(), right.TypeName())
@@ -218,8 +218,8 @@ func (left Value) Add(right Value) (val Value, err error) {
 }
 
 func (left Value) Minus(right Value) (val Value, err error) {
-	left = left.realValue()
-	right = right.realValue()
+	left = left.RealValue()
+	right = right.RealValue()
 	minusable, ok := left.Value.(Arithmacable)
 	if !ok {
 		err = fmt.Errorf("can't - [%s] with [%s]", left.TypeName(), right.TypeName())
@@ -229,8 +229,8 @@ func (left Value) Minus(right Value) (val Value, err error) {
 }
 
 func (left Value) Multiply(right Value) (val Value, err error) {
-	left = left.realValue()
-	right = right.realValue()
+	left = left.RealValue()
+	right = right.RealValue()
 	multi, ok := left.Value.(Arithmacable)
 	if !ok {
 		err = fmt.Errorf("can't * [%s] with [%s]", left.TypeName(), right.TypeName())
@@ -240,8 +240,8 @@ func (left Value) Multiply(right Value) (val Value, err error) {
 }
 
 func (left Value) Devide(right Value) (val Value, err error) {
-	left = left.realValue()
-	right = right.realValue()
+	left = left.RealValue()
+	right = right.RealValue()
 	devi, ok := left.Value.(Arithmacable)
 	if !ok {
 		err = fmt.Errorf("can't * [%s] with [%s]", left.TypeName(), right.TypeName())
@@ -251,8 +251,8 @@ func (left Value) Devide(right Value) (val Value, err error) {
 }
 
 func (left Value) Compare(right Value) (ret int, err error) {
-	rlv := left.realValue()
-	rrv := right.realValue()
+	rlv := left.RealValue()
+	rrv := right.RealValue()
 	if rlv.Type != rrv.Type {
 		return 0, errors.New("type not match")
 	}
@@ -293,7 +293,7 @@ func (left Value) Or(right Value) Value {
 }
 
 func (val Value) Bool() (ret bool) {
-	val = val.realValue()
+	val = val.RealValue()
 	if b, ok := val.Value.(Booler); ok {
 		return b.Bool()
 	}

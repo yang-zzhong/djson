@@ -7,7 +7,7 @@ import (
 
 func TestString_Index(t *testing.T) {
 	// "hello world".index("world")
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenString, Raw: []byte("hello world")},
 		{Type: TokenDot},
 		{Type: TokenIdentifier, Raw: []byte("index")},
@@ -30,7 +30,7 @@ func TestString_Index(t *testing.T) {
 
 func TestString_Match(t *testing.T) {
 	// "hello world".match("world$")
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenString, Raw: []byte("hello world")},
 		{Type: TokenDot},
 		{Type: TokenIdentifier, Raw: []byte("match")},
@@ -49,7 +49,7 @@ func TestString_Match(t *testing.T) {
 
 func TestString_sub(t *testing.T) {
 	// "hello world".sub([0, 4])
-	scanner := NewTokenScanner(newLexMock([]*Token{
+	scanner := NewTokenScanner(NewLexMock([]*Token{
 		{Type: TokenString, Raw: []byte("hello world")},
 		{Type: TokenDot},
 		{Type: TokenIdentifier, Raw: []byte("sub")},

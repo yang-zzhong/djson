@@ -20,7 +20,7 @@ type Object interface {
 
 type object struct {
 	pairs []*pair
-	*callableImp
+	*CallableRegister
 }
 
 type pair struct {
@@ -39,11 +39,11 @@ func (p *pair) copy() *pair {
 var _ Object = &object{}
 
 func NewObject(pairs ...*pair) *object {
-	obj := &object{pairs: pairs, callableImp: newCallable("object")}
-	obj.register("set", setObject)
-	obj.register("replace", replaceObject)
-	obj.register("del", delObject)
-	obj.register("get", getObject)
+	obj := &object{pairs: pairs, CallableRegister: NewCallableRegister("object")}
+	obj.RegisterCall("set", setObject)
+	obj.RegisterCall("replace", replaceObject)
+	obj.RegisterCall("del", delObject)
+	obj.RegisterCall("get", getObject)
 	return obj
 }
 

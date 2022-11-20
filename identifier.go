@@ -110,8 +110,8 @@ func (id identifier) Call(scanner TokenScanner, ctx Context) (val Value, err err
 		err = fmt.Errorf("can't call function [%s] without caller", name)
 		return
 	}
-	val = id.p.realValue()
-	call, ok := val.Value.(callable)
+	val = id.p.RealValue()
+	call, ok := val.Value.(Callable)
 	if !ok {
 		err = fmt.Errorf("%s can't support call function", val.TypeName())
 		return

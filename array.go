@@ -19,7 +19,7 @@ type Array interface {
 }
 
 type array struct {
-	*callableImp
+	*CallableRegister
 	items []Value
 }
 
@@ -27,12 +27,12 @@ var _ Array = &array{}
 
 func NewArray(items ...Value) *array {
 	arr := &array{
-		callableImp: newCallable("array"),
-		items:       items,
+		CallableRegister: NewCallableRegister("array"),
+		items:            items,
 	}
-	arr.register("set", setArray)
-	arr.register("del", delArray)
-	arr.register("get", getArray)
+	arr.RegisterCall("set", setArray)
+	arr.RegisterCall("del", delArray)
+	arr.RegisterCall("get", getArray)
 	return arr
 }
 
