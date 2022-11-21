@@ -440,6 +440,7 @@ func NewStmtExecutor(scanner TokenScanner, ctx Context, opts ...StmtOption) *stm
 		Compare(scanner),
 		AddOrMinus(scanner),
 		MultiplyOrDevide(scanner),
+		Mod(scanner),
 		Call(scanner, ctx),
 		Dot(scanner),
 		Range(scanner),

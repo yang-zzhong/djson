@@ -30,9 +30,9 @@ func NewArray(items ...Value) *array {
 		CallableRegister: NewCallableRegister("array"),
 		items:            items,
 	}
-	arr.RegisterCall("set", setArray)
+	arr.RegisterCall("map", setArray)
 	arr.RegisterCall("del", delArray)
-	arr.RegisterCall("get", getArray)
+	arr.RegisterCall("filter", filterArray)
 	return arr
 }
 
@@ -57,7 +57,7 @@ func delArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err 
 	return
 }
 
-func getArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
+func filterArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(*array)
 	no := NewArray()
 	err = eachArrayItem(o, scanner, vars, func(val Value, idx int) error {
@@ -83,7 +83,11 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 		if expr.Exited() {
 			Exit()
 		}
-		err = handle(expr.value, i)
+		p := expr.Value()
+		if p.Type == ValueNull {
+			p = val
+		}
+		err = handle(p, i)
 		return err == nil
 	})
 	return

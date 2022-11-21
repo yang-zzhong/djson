@@ -33,7 +33,7 @@ func (c *CallableRegister) call(k string, caller Value, scanner TokenScanner, va
 		call, ok = c.caseInsensitiveCallback(k)
 	}
 	if !ok {
-		err = fmt.Errorf("undefined method for %s", c.typ)
+		err = fmt.Errorf("undefined method [%s] for %s", k, c.typ)
 		return
 	}
 	return call(caller, scanner, vars)

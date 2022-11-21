@@ -40,10 +40,10 @@ var _ Object = &object{}
 
 func NewObject(pairs ...*pair) *object {
 	obj := &object{pairs: pairs, CallableRegister: NewCallableRegister("object")}
-	obj.RegisterCall("set", setObject)
+	obj.RegisterCall("map", setObject)
 	obj.RegisterCall("replace", replaceObject)
 	obj.RegisterCall("del", delObject)
-	obj.RegisterCall("get", getObject)
+	obj.RegisterCall("filter", getObject)
 	return obj
 }
 

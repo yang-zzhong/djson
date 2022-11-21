@@ -2,10 +2,12 @@ package djson
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"testing"
 )
 
-func TestNewerStmt_arithmatic(t *testing.T) {
+func TestStmt_arithmatic(t *testing.T) {
 	// 5 + 2 - 1
 	g := NewLexMock([]*Token{
 		{Type: TokenNumber, Raw: []byte{'5'}},
@@ -77,7 +79,7 @@ func TestNewerStmt_arithmatic(t *testing.T) {
 	}
 }
 
-func TestNewerStmt_assignation(t *testing.T) {
+func TestStmt_assignation(t *testing.T) {
 	// a = 5 + 3
 	g := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
@@ -100,7 +102,7 @@ func TestNewerStmt_assignation(t *testing.T) {
 	}
 }
 
-func TestNewerStmt_assignationWithReduction(t *testing.T) {
+func TestStmt_assignationWithReduction(t *testing.T) {
 	// a = true => 5 + 3
 	g := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
@@ -137,7 +139,7 @@ func TestNewerStmt_assignationWithReduction(t *testing.T) {
 	}
 }
 
-func TestNewerStmt_objectOperate(t *testing.T) {
+func TestStmt_objectOperate(t *testing.T) {
 	// {"hello": "world"} + {"world": "hello"}
 	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
@@ -171,8 +173,8 @@ func TestNewerStmt_objectOperate(t *testing.T) {
 	}
 }
 
-func TestNewerStmt_objectCall(t *testing.T) {
-	// {"hello": "world"}.set(k == "hello" => v + " ^_^")
+func TestStmt_objectCall(t *testing.T) {
+	// {"hello": "world"}.map(k == "hello" => v + " ^_^")
 	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("hello")},
@@ -180,7 +182,7 @@ func TestNewerStmt_objectCall(t *testing.T) {
 		{Type: TokenString, Raw: []byte("world")},
 		{Type: TokenBraceClose},
 		{Type: TokenDot},
-		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenIdentifier, Raw: []byte("map")},
 		{Type: TokenParenthesesOpen},
 		{Type: TokenIdentifier, Raw: []byte("k")},
 		{Type: TokenEqual},
@@ -205,8 +207,8 @@ func TestNewerStmt_objectCall(t *testing.T) {
 	}
 }
 
-func TestNewerStmt_call(t *testing.T) {
-	// {"0": 1}.set(k == "0" => 4).set(v == 4 => 5)
+func TestStmt_call(t *testing.T) {
+	// {"0": 1}.map(k == "0" => 4).map(v == 4 => 5)
 	g := NewLexMock([]*Token{
 		{Type: TokenBraceOpen},
 		{Type: TokenString, Raw: []byte("0")},
@@ -214,7 +216,7 @@ func TestNewerStmt_call(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'1'}},
 		{Type: TokenBraceClose},
 		{Type: TokenDot},
-		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenIdentifier, Raw: []byte("map")},
 		{Type: TokenParenthesesOpen},
 		{Type: TokenIdentifier, Raw: []byte{'k'}},
 		{Type: TokenEqual},
@@ -223,7 +225,7 @@ func TestNewerStmt_call(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'4'}},
 		{Type: TokenParenthesesClose},
 		{Type: TokenDot},
-		{Type: TokenIdentifier, Raw: []byte("set")},
+		{Type: TokenIdentifier, Raw: []byte("map")},
 		{Type: TokenParenthesesOpen},
 		{Type: TokenIdentifier, Raw: []byte{'v'}},
 		{Type: TokenEqual},
@@ -248,7 +250,35 @@ func TestNewerStmt_call(t *testing.T) {
 	}
 }
 
-func BenchmarkNewerStmt_arithmatic(b *testing.B) {
+func TestStmt_config(t *testing.T) {
+	f, err := os.Open("./testdata/config.djson")
+	if err != nil {
+		t.Fatal(err)
+	}
+	scanner := NewTokenScanner(NewLexer(f, 128))
+	stmt := NewStmtExecutor(scanner, NewContext())
+	if err := stmt.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(stmt.Value())
+}
+
+func BenchmarkStmt_config(b *testing.B) {
+	f, err := os.Open("./testdata/config.djson")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		f.Seek(0, io.SeekStart)
+		scanner := NewTokenScanner(NewLexer(f, 128))
+		stmt := NewStmtExecutor(scanner, NewContext())
+		if err := stmt.Execute(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkStmt_arithmatic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// ((5 + 2) * 3 == 21) || false => "hello world"
 		g := NewLexMock([]*Token{

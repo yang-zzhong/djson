@@ -69,7 +69,7 @@ func TestArray_get(t *testing.T) {
 		{Type: TokenNumber, Raw: []byte{'1'}},
 		{Type: TokenParenthesesClose},
 	}))
-	val, err := getArray(Value{Type: ValueArray, Value: arr}, scanner, NewContext())
+	val, err := filterArray(Value{Type: ValueArray, Value: arr}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}

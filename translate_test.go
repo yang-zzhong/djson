@@ -67,7 +67,7 @@ header = {
   "type": "h3",
   "innerText": ""
 };
-header.set(k == "innerText" => "基本信息");
+header.map(k == "innerText" => "基本信息");
 `
 	ib := bytes.NewBuffer([]byte(data))
 	ob := bytes.Buffer{}

@@ -273,6 +273,8 @@ func (left Value) Equal(right Value) bool {
 }
 
 func (left Value) Mod(right Value) (val Value, err error) {
+	left = left.RealValue()
+	right = right.RealValue()
 	var lv, rv int64
 	if lv, err = left.Int(); err != nil {
 		return

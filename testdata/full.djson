@@ -79,7 +79,7 @@ azs = [
   "type": "col",
   "children": [
     # set header name
-    header.set(k == "innerText" => "用户信息"),
+    header.map(k == "innerText" => "用户信息"),
     {
       "type": "row",
       "margin": "10px 0px",
@@ -96,7 +96,7 @@ azs = [
      ]
   }, 
   # set header name
-  header.set(k == "innerText" => "其他信息"),
+  header.map(k == "innerText" => "其他信息"),
   row + {
     "children": [{
       "type": "row",

@@ -1,0 +1,7 @@
+# a config test
+
+users = [1 ... 10].map({
+    "username": "user" + v,
+    "password": "password" + i,
+    "i": i
+}).map(v + {"odd": v.i%2 != 0});

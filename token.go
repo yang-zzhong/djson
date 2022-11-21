@@ -85,9 +85,10 @@ func (t Token) Name() string {
 		TokenFalse:            "False",            // false
 		TokenReduction:        "Reduction",        // =>
 		TokenNumber:           "Number",           // number
-		TokenString:           "String",           // string
-		TokenRange:            "Range",            // ... // [1 ... 10].map({"key": "" + v + "_x"})
-		TokenIdentifier:       "Identifier",       // identifier
+		TokenMod:              "Mod",
+		TokenString:           "String",     // string
+		TokenRange:            "Range",      // ... // [1 ... 10].map({"key": "" + v + "_x"})
+		TokenIdentifier:       "Identifier", // identifier
 		TokenWhitespace:       "Whitespace",
 	}[t.Type]
 }
