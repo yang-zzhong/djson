@@ -38,11 +38,12 @@ func (e *stmt) Value(val Value) (ret Value, err error) {
 			return
 		} else if matched {
 			nextTried = true
-			if e.opt.debug {
-				fmt.Printf("%s\n", e.name)
-			}
 			val = ht
 			ret = val
+			if !e.opt.debug {
+				continue
+			}
+			fmt.Printf("%s\n", e.name)
 		} else if !nextTried {
 			// try higher priorities
 			if val, err = e.next.Value(val); err != nil {

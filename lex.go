@@ -4,6 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
+)
+
+var (
+	candidatesPool = sync.Pool{
+		New: func() interface{} {
+			return newCandidates()
+		},
+	}
 )
 
 // MatchStatus match status for Matcher.Match
@@ -43,7 +52,7 @@ type SourceReplacer interface {
 // Buffer a read buffer for lexer
 type Buffer interface {
 	Take([]byte) (int, error) // get []byte from the buffer
-	TakeBack()                // put the last take back for some reason, such as token matched with Matched status returned
+	PutLast()                 // put the last take back for some reason, such as token matched with Matched status returned
 }
 
 type buffer struct {
@@ -86,7 +95,7 @@ func (b *buffer) Take(bs []byte) (taked int, err error) {
 }
 
 // TakeBack put the last take back for some reason, such as token matched with Matched status returned
-func (b *buffer) TakeBack() {
+func (b *buffer) PutLast() {
 	b.offset -= b.lastTakeSize
 	b.lastTakeSize = 0
 }
@@ -374,33 +383,70 @@ func NewLexer(source io.Reader, bufSize uint) *lexer {
 
 type candidate struct {
 	token        *Token
+	del          bool
 	dropLastChar bool
 }
 
-type candidates []candidate
+type candidates struct {
+	items []candidate
+	total int
+}
+
+func newCandidates() *candidates {
+	return &candidates{items: make([]candidate, 8)}
+}
 
 func (cs candidates) slct() candidate {
 	var selected candidate
-	for i, c := range cs {
-		if i == 0 {
-			selected = c
+	for i := 0; i < cs.total; i++ {
+		if cs.items[i].del {
 			continue
 		}
-		if selected.token.Type == TokenIdentifier && c.token.Type != TokenIdentifier {
-			selected = c
+		if i == 0 {
+			selected = cs.items[i]
+			continue
+		}
+		if selected.token.Type == TokenIdentifier && cs.items[i].token.Type != TokenIdentifier {
+			selected = cs.items[i]
 		}
 	}
 	return selected
 }
 
 func (cs *candidates) del(token *Token) {
-	for i, c := range *cs {
+	for i := 0; i < cs.total; i++ {
+		c := cs.items[i]
 		if c.token.Type != token.Type {
 			continue
 		}
-		*cs = append((*cs)[:i], (*cs)[i+1:]...)
+		c.del = true
+		cs.items[i] = c
 		return
 	}
+}
+
+func (cs *candidates) append(c candidate) {
+	cs.items[cs.total] = c
+	cs.total++
+}
+
+func (cs *candidates) reset() {
+	cs.total = 0
+}
+
+func (cs *candidates) len() int {
+	ret := 0
+	for i := 0; i < cs.total; i++ {
+		if !cs.items[i].del {
+			ret += 1
+		}
+	}
+	return ret
+}
+
+func (cs *candidates) copyFrom(n *candidates) {
+	copy(cs.items, n.items[:n.total])
+	cs.total = n.total
 }
 
 func (g *lexer) ReplaceMatchers(matchers ...TokenMatcher) {
@@ -447,7 +493,8 @@ func (g *lexer) NextToken(token *Token) error {
 nextToken:
 	g.tokenAtCol = g.col
 	g.tokenAtRow = g.row
-	var cs candidates
+	cs := candidatesPool.Get().(*candidates)
+	cs.reset()
 	g.stash.reset()
 	g.initMatchers()
 	for {
@@ -460,24 +507,27 @@ nextToken:
 			}
 			g.bs[0] = 0
 		}
-		var newc []candidate
-		g.match(&cs, &newc)
+		newc := candidatesPool.Get().(*candidates)
+		newc.reset()
+		g.match(cs, newc)
 		g.stash.append(g.bs[0])
-		if len(newc) > 0 {
+		if newc.len() > 0 {
 			g.forwardChar(g.bs[0])
-			cs = newc
+			cs.copyFrom(newc)
+			candidatesPool.Put(newc)
 			continue
 		}
-		g.buf.TakeBack()
+		g.buf.PutLast()
 		break
 	}
-	if len(cs) == 0 {
+	if cs.len() == 0 {
 		return fmt.Errorf("upexpected char: [%s] at %d, %d", g.bs, g.row, g.col)
 	}
 	cand := cs.slct()
+	candidatesPool.Put(cs)
 	if cand.dropLastChar {
 		g.backwardChar(g.bs[0])
-		g.buf.TakeBack()
+		g.buf.PutLast()
 	}
 	*token = *cand.token
 	if token.Skip() {
@@ -488,7 +538,7 @@ nextToken:
 	return nil
 }
 
-func (g *lexer) match(cs *candidates, newc *[]candidate) {
+func (g *lexer) match(cs *candidates, newc *candidates) {
 	for i := 0; i < len(g.matcherStatuses); i++ {
 		if g.matcherStatuses[i].excloded {
 			continue
@@ -499,13 +549,13 @@ func (g *lexer) match(cs *candidates, newc *[]candidate) {
 			cs.del(m.Token())
 			g.excludeMatcher(i)
 		case Matched:
-			*newc = append(*newc, candidate{token: m.Token(), dropLastChar: true})
+			newc.append(candidate{token: m.Token(), dropLastChar: true})
 			g.excludeMatcher(i)
 		case Match:
-			*newc = append(*newc, candidate{token: m.Token()})
+			newc.append(candidate{token: m.Token()})
 			g.excludeMatcher(i)
 		case Matching:
-			*newc = append(*newc, candidate{token: m.Token()})
+			newc.append(candidate{token: m.Token()})
 		}
 	}
 }
