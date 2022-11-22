@@ -45,7 +45,7 @@ func NewTranslator(e Encoder, opts ...func(*translator)) *translator {
 
 // Translate implements ths Translator
 func (t *translator) Translate(r io.Reader, w io.Writer) (int, error) {
-	scanner := NewTokenScanner(NewLexerV2(r, t.bufSize))
+	scanner := NewTokenScanner(NewLexer(r, t.bufSize))
 	if t.ctx == nil {
 		t.ctx = NewContext()
 	}

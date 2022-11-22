@@ -42,7 +42,7 @@ func TestTranslator_full(t *testing.T) {
 	t.Logf(ob.String())
 }
 
-func BenchmarkTranslator(b *testing.B) {
+func BenchmarkTranslator_assign(b *testing.B) {
 	input := `name = ((5 + 2) * 3 == 21) || false => "test";
     version = "v0.0.1";
     {
@@ -61,7 +61,7 @@ func BenchmarkTranslator(b *testing.B) {
 	}
 }
 
-func TestTranslator_assign(t *testing.T) {
+func TestTranslator_objectmap(t *testing.T) {
 	data := `
 header = {
   "type": "h3",
@@ -89,7 +89,7 @@ func BenchmarkTranslator_full(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		f.Seek(0, io.SeekStart)
-		translator := NewTranslator(NewJsonEncoder("  "), BuffSize(1024))
+		translator := NewTranslator(NewJsonEncoder("  "), BuffSize(2048))
 		ob := bytes.Buffer{}
 		_, err := translator.Translate(f, &ob)
 		if err != nil {
