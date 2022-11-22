@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestMatcherLexer_number(t *testing.T) {
+func TestLexer_number(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -43,7 +43,7 @@ func TestMatcherLexer_number(t *testing.T) {
 	}
 }
 
-func TestMatcherLexer_string(t *testing.T) {
+func TestLexer_string(t *testing.T) {
 	data := []struct {
 		data      string
 		val       []byte
@@ -72,7 +72,7 @@ func TestMatcherLexer_string(t *testing.T) {
 	}
 }
 
-func TestMatcherLexer_range(t *testing.T) {
+func TestLexer_range(t *testing.T) {
 	data := "[1 ... 10]"
 	g := NewLexer(strings.NewReader(data), 16)
 	tokens := []*Token{
@@ -93,7 +93,7 @@ func TestMatcherLexer_range(t *testing.T) {
 	}
 }
 
-func TestMatcherLexer_bool(t *testing.T) {
+func TestLexer_bool(t *testing.T) {
 	data := []struct {
 		data      string
 		typ       TokenType
@@ -123,7 +123,7 @@ func TestMatcherLexer_bool(t *testing.T) {
 	}
 }
 
-func TestMatcherLexer_compose(t *testing.T) {
+func TestLexer_compose(t *testing.T) {
 	data := `
 data = {
     "string": "123",
@@ -207,7 +207,7 @@ data = {
 	}
 }
 
-func BenchmarkMatcherLexer_NextToken(n *testing.B) {
+func BenchmarkLexer_NextToken(n *testing.B) {
 	r := strings.NewReader(`data = {
     "string": "123",
     "int": 123,
