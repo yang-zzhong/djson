@@ -25,7 +25,7 @@ func TestMapRange(t *testing.T) {
 	if s.value.Type != ValueArray {
 		t.Fatal("type error")
 	}
-	arr := s.value.Value.(Array)
+	arr := s.value.Value.(ItemEachable)
 	arr.Each(func(i int, val Value) bool {
 		if val.Type != ValueInt {
 			t.Fatal("elem type error")

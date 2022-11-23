@@ -360,6 +360,8 @@ func Factor(scanner TokenScanner, ctx Context) *stmt {
 			}}
 		case TokenExit:
 			Exit()
+		case TokenReturn:
+			ret = ReturnValue()
 		case TokenTrue:
 			ret = BoolValue(true)
 		case TokenFalse:
@@ -384,12 +386,12 @@ func Factor(scanner TokenScanner, ctx Context) *stmt {
 		case TokenBracketsOpen:
 			sub := newArrayExecutor(e.scanner, ctx)
 			if err = sub.execute(); err == nil {
-				ret = ArrayValue(sub.value)
+				ret = sub.value
 			}
 		case TokenBraceOpen:
 			sub := newObjectExecutor(e.scanner, ctx)
 			if err = sub.execute(); err == nil {
-				ret = ObjectValue(sub.value)
+				ret = sub.value
 			}
 		default:
 			err = fmt.Errorf("unexpected token [%s] at %d, %d", token.Name(), token.Row, token.Col)
@@ -471,13 +473,24 @@ func (ns *stmtExecutor) Execute() (err error) {
 		}
 	}()
 	var end bool
+	var returned bool
+	var val Value
 	for {
 		if end, err = ns.scanner.Scan(); end || err != nil {
 			return
 		}
-		if ns.value, err = ns.expr.Value(ns.value); err != nil {
+		if returned {
+			// drop all the rest token
+			continue
+		}
+		if val, err = ns.expr.Value(val); err != nil {
 			return
 		}
+		if val.Type == ValueReturn {
+			returned = true
+			continue
+		}
+		ns.value = val
 	}
 }
 

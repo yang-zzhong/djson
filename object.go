@@ -6,15 +6,17 @@ import (
 	"fmt"
 )
 
+type PairEachable interface {
+	Each(func(k []byte, val Value) bool)
+}
+
 type Object interface {
-	Arithmacable
-	Comparable
+	PairEachable
 	Set(k []byte, val Value)
 	Get(k []byte) Value
 	Has(k []byte) bool
 	Del(k []byte)
 	Copy() Object
-	Each(func(k []byte, val Value) bool)
 	Total() int
 }
 
@@ -49,7 +51,7 @@ func NewObject(pairs ...*pair) *object {
 
 func setObject(val Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := val.Value.(Object)
-	r := NewObject()
+	r := o.Copy()
 	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
 		r.Set(k, val)
 		return nil
@@ -60,7 +62,7 @@ func setObject(val Value, nexter TokenScanner, vars Context) (ret Value, err err
 
 func replaceObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(Object)
-	r := NewObject()
+	r := o.Copy()
 	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
 		if val.Type != ValueObject {
 			return errors.New("replace only support a object as Value")
@@ -90,10 +92,12 @@ func getObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err 
 
 func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	o := caller.Value.(Object)
+	r := o.Copy()
 	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {
-		o.Del(k)
+		r.Del(k)
 		return nil
 	})
+	ret = ObjectValue(r)
 	return
 }
 
@@ -112,14 +116,11 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 		if expr.Exited() {
 			Exit()
 		}
-		p := expr.value
+		p := expr.Value()
 		if p.Type == ValueNull {
-			p = val
+			return true
 		}
-		if err = handle(k, p); err != nil {
-			return false
-		}
-		return true
+		return handle(k, p) == nil
 	})
 	return
 }
@@ -281,7 +282,7 @@ func (obj *object) Each(handle func(k []byte, val Value) bool) {
 type objectExecutor struct {
 	scanner TokenScanner
 	vars    Context
-	value   Object
+	value   Value
 }
 
 func newObjectExecutor(scanner TokenScanner, vars Context) *objectExecutor {
@@ -293,8 +294,9 @@ func (e *objectExecutor) execute() (err error) {
 	return
 }
 
-func (e *objectExecutor) pairs() (val Object, err error) {
-	val = NewObject()
+func (e *objectExecutor) pairs() (ret Value, err error) {
+	val := NewObject()
+	ret = ObjectValue(val)
 	e.vars.pushMe(ObjectValue(val))
 	defer e.vars.popMe()
 	for {

@@ -40,6 +40,7 @@ const (
 	TokenWhitespace                         // whitespace
 	TokenMod                                // %
 	TokenExit                               // exit
+	TokenReturn                             // return
 )
 
 type Token struct {

@@ -10,8 +10,17 @@ req = {
     }
 };
 
-res = _http.get(req).if(_me.responseCode != 200 => exit).body;
+res = _http.get(req);
 
-1 == 2 => exit;
+res.statusCode != 200 => (
+    _log.Print("hello world");
+    exit;
+)
 
-[1 ... 10].get({"key": i, "val": v}).set(i % 2 == 0 => v +{"odd": "!odd"});
+res = [0 ... 100000].map(
+    r = _http.get(req);
+    ret = r.statusCode == 200 => true;
+    ret = !ret => _json.decode(r.body).errorMessage;
+)
+
+res

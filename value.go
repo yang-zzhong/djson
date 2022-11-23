@@ -50,6 +50,7 @@ const (
 	ValueRange
 	ValueCallable
 	ValueExit
+	ValueReturn
 )
 
 type Value struct {
@@ -100,6 +101,10 @@ func ArrayValue(a Array) Value {
 // BoolValue return a Bool Value
 func BoolValue(b bool) Value {
 	return Value{Type: ValueBool, Value: Bool(b)}
+}
+
+func ReturnValue() Value {
+	return Value{Type: ValueReturn}
 }
 
 func CallableValue(c Callable) Value {

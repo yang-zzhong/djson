@@ -46,11 +46,11 @@ func TestObject_del(t *testing.T) {
 		{Type: TokenString, Raw: []byte{'0'}},
 		{Type: TokenParenthesesClose},
 	}))
-	_, err := delObject(Value{Type: ValueArray, Value: obj}, scanner, NewContext())
+	val, err := delObject(Value{Type: ValueArray, Value: obj}, scanner, NewContext())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if obj.Total() != 2 {
+	if !(val.Type == ValueObject && val.Value.(Object).Total() == 2) {
 		t.Fatal("del object error")
 	}
 }

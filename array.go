@@ -7,15 +7,13 @@ import (
 )
 
 type Array interface {
-	Arithmacable
-	Comparable
+	ItemEachable
 	Set(i int, val Value)
 	Get(i int) Value
 	Append(val ...Value)
 	Copy() Array
 	Del(i int)
 	Total() int
-	Each(func(i int, val Value) bool)
 }
 
 type array struct {
@@ -29,6 +27,17 @@ func NewArray(items ...Value) *array {
 	arr := &array{
 		CallableRegister: NewCallableRegister("array"),
 		items:            items,
+	}
+	arr.RegisterCall("map", setArray)
+	arr.RegisterCall("del", delArray)
+	arr.RegisterCall("filter", filterArray)
+	return arr
+}
+
+func NewArrayWithLength(length int) *array {
+	arr := &array{
+		CallableRegister: NewCallableRegister("array"),
+		items:            make([]Value, length),
 	}
 	arr.RegisterCall("map", setArray)
 	arr.RegisterCall("del", delArray)
@@ -85,10 +94,9 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 		}
 		p := expr.Value()
 		if p.Type == ValueNull {
-			p = val
+			return true
 		}
-		err = handle(p, i)
-		return err == nil
+		return handle(p, i) == nil
 	})
 	return
 }
@@ -220,7 +228,7 @@ func (arr *array) Append(val ...Value) {
 type arrayExecutor struct {
 	scanner TokenScanner
 	vars    Context
-	value   Array
+	value   Value
 }
 
 func newArrayExecutor(scanner TokenScanner, vs Context) *arrayExecutor {
@@ -235,7 +243,7 @@ func (e *arrayExecutor) execute() (err error) {
 	return
 }
 
-func (e *arrayExecutor) items() (val Array, err error) {
+func (e *arrayExecutor) items() (ret Value, err error) {
 	arr := NewArray()
 	e.scanner.PushEnds(TokenBracketsClose, TokenComma)
 	defer e.scanner.PopEnds(TokenBracketsClose, TokenComma)
@@ -250,7 +258,7 @@ func (e *arrayExecutor) items() (val Array, err error) {
 			Exit()
 		}
 		if expr.value.Type == ValueRange {
-			val = expr.value.Value.(Array)
+			ret = expr.value
 			return
 		}
 		arr.Append(expr.value)
@@ -258,7 +266,7 @@ func (e *arrayExecutor) items() (val Array, err error) {
 			break
 		}
 	}
-	val = arr
+	ret = ArrayValue(arr)
 	return
 }
 

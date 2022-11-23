@@ -17,7 +17,9 @@ type CallableRegister struct {
 type Callback func(caller Value, scanner TokenScanner, vars Context) (Value, error)
 
 func NewCallableRegister(typ string) *CallableRegister {
-	return &CallableRegister{typ: typ}
+	c := &CallableRegister{typ: typ}
+	c.RegisterCall("if", ifCall)
+	return c
 }
 
 func (c *CallableRegister) RegisterCall(k string, ck Callback) {
@@ -46,4 +48,23 @@ func (c *CallableRegister) caseInsensitiveCallback(k string) (Callback, bool) {
 		}
 	}
 	return nil, false
+}
+
+func ifCall(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
+	vars.pushMe(val)
+	defer vars.popMe()
+	scanner.PushEnds(TokenParenthesesClose)
+	defer scanner.PopEnds(TokenParenthesesClose)
+	expr := NewStmtExecutor(scanner, vars)
+	if err = expr.Execute(); err != nil {
+		return
+	}
+	if expr.Exited() {
+		Exit()
+	}
+	if ret = expr.Value(); ret.Type != ValueNull {
+		return
+	}
+	ret = val
+	return
 }

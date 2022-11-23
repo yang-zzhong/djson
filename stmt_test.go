@@ -80,7 +80,6 @@ func TestStmt_arithmatic(t *testing.T) {
 }
 
 func TestStmt_assignation(t *testing.T) {
-	// a = 5 + 3
 	g := NewLexMock([]*Token{
 		{Type: TokenIdentifier, Raw: []byte{'a'}},
 		{Type: TokenAssignation},

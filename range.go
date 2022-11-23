@@ -1,6 +1,8 @@
 package djson
 
-import "fmt"
+type ItemEachable interface {
+	Each(func(i int, val Value) bool)
+}
 
 type range_ struct {
 	from int
@@ -15,6 +17,7 @@ func NewRange(from, to int) *range_ {
 		CallableRegister: NewCallableRegister("range"),
 	}
 	rg.RegisterCall("map", mapRange)
+	rg.RegisterCall("each", eachRange)
 	return rg
 }
 
@@ -23,7 +26,7 @@ func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
 	r := NewArray()
-	val.Value.(Array).Each(func(i int, val Value) bool {
+	val.Value.(ItemEachable).Each(func(i int, val Value) bool {
 		scanner.SetOffset(offset)
 		vars.Assign([]byte{'i'}, IntValue(int64(i)))
 		vars.Assign([]byte{'v'}, val)
@@ -41,39 +44,24 @@ func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 	return
 }
 
-func (*range_) Add(Value) (val Value, err error) {
-	err = fmt.Errorf("range can't add")
+func eachRange(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
+	offset := scanner.Offset()
+	scanner.PushEnds(TokenParenthesesClose)
+	defer scanner.PopEnds(TokenParenthesesClose)
+	val.Value.(ItemEachable).Each(func(i int, val Value) bool {
+		scanner.SetOffset(offset)
+		vars.Assign([]byte{'i'}, IntValue(int64(i)))
+		vars.Assign([]byte{'v'}, val)
+		stmt := NewStmtExecutor(scanner, vars)
+		if err = stmt.Execute(); err != nil {
+			return false
+		}
+		if stmt.Exited() {
+			Exit()
+		}
+		return true
+	})
 	return
-}
-func (*range_) Minus(Value) (val Value, err error) {
-	err = fmt.Errorf("range can't minus")
-	return
-}
-func (*range_) Devide(Value) (val Value, err error) {
-	err = fmt.Errorf("range can't devide")
-	return
-}
-func (*range_) Multiply(Value) (val Value, err error) {
-	err = fmt.Errorf("range can't multiply")
-	return
-}
-
-func (*range_) Compare(Value) (r int, err error) {
-	err = fmt.Errorf("range can't compare")
-	return
-}
-
-func (arr *range_) Set(idx int, val Value) {
-	// range not support set
-}
-
-func (arr *range_) Get(idx int) Value {
-	// range not support set
-	return Value{Type: ValueNull}
-}
-
-func (arr *range_) Del(idx int) {
-	// range not support del
 }
 
 func (arr *range_) Each(handle func(i int, val Value) bool) {
@@ -84,14 +72,10 @@ func (arr *range_) Each(handle func(i int, val Value) bool) {
 	}
 }
 
-func (arr *range_) Copy() Array {
+func (arr *range_) Copy() *range_ {
 	return &range_{from: arr.from, to: arr.to}
 }
 
 func (arr *range_) Total() int {
 	return arr.to - arr.from + 1
-}
-
-func (arr *range_) Append(val ...Value) {
-	// range not support append
 }
