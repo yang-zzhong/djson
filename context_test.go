@@ -20,7 +20,8 @@ func TestLookup(t *testing.T) {
 			},
 		},
 	}}
-	vs := ctx{{Name: []byte("var1"), Value: v}}
+	vs := NewContext()
+	vs.Assign([]byte{'v', 'a', 'r', '1'}, v)
 	v = vs.lookup(path("var1.val1.0"))
 	if v.Value.(int64) != 1 {
 		t.Fatal("find failed")

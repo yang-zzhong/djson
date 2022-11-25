@@ -12,14 +12,14 @@ var (
 )
 
 type stmt struct {
-	next    *stmt                                                              // next stmt should try, the priority of this stmt is always lower than next
-	name    string                                                             // stmt name
-	handle  func(val Value, token *Token) (handled bool, ret Value, err error) // match token and handle the stmt
-	scanner TokenScanner                                                       // scanner
-	opt     *option                                                            // opt
+	next    *stmt                                                                           // next stmt should try, the priority of this stmt is always lower than next
+	name    string                                                                          // stmt name
+	handle  func(val Value, ctx Context, token *Token) (handled bool, ret Value, err error) // match token and handle the stmt
+	scanner TokenScanner                                                                    // scanner
+	opt     *option                                                                         // opt
 }
 
-func (e *stmt) Value(val Value) (ret Value, err error) {
+func (e *stmt) Value(val Value, ctx Context) (ret Value, err error) {
 	terminal := e.next == nil
 	var matched, end, nextTried bool
 	var ht Value
@@ -28,13 +28,13 @@ func (e *stmt) Value(val Value) (ret Value, err error) {
 			return
 		}
 		if terminal {
-			_, ret, err = e.handle(val, e.scanner.Token())
+			_, ret, err = e.handle(val, ctx, e.scanner.Token())
 			if e.opt.debug {
 				fmt.Printf("%s\n", e.name)
 			}
 			return
 			// try this level
-		} else if matched, ht, err = e.handle(val, e.scanner.Token()); err != nil {
+		} else if matched, ht, err = e.handle(val, ctx, e.scanner.Token()); err != nil {
 			return
 		} else if matched {
 			nextTried = true
@@ -46,7 +46,7 @@ func (e *stmt) Value(val Value) (ret Value, err error) {
 			fmt.Printf("%s\n", e.name)
 		} else if !nextTried {
 			// try higher priorities
-			if val, err = e.next.Value(val); err != nil {
+			if val, err = e.next.Value(val, ctx); err != nil {
 				return
 			}
 			ret = val
@@ -63,14 +63,14 @@ func Exit() {
 
 func Assign(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Assign"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenAssignation {
 			return
 		}
 		matched = true
 		e.scanner.Forward()
 		var right Value
-		if right, err = e.next.Value(NullValue()); err != nil {
+		if right, err = e.next.Value(NullValue(), ctx); err != nil {
 			return
 		}
 		if val.Type != ValueIdentifier {
@@ -86,14 +86,14 @@ func Assign(scanner TokenScanner) *stmt {
 
 func Reduction(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Reduction"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenReduction {
 			return
 		}
 		matched = true
 		e.scanner.Forward()
 		var right Value
-		if right, err = e.next.Value(NullValue()); err != nil {
+		if right, err = e.next.Value(NullValue(), ctx); err != nil {
 			return
 		}
 		if val.Bool() {
@@ -106,7 +106,7 @@ func Reduction(scanner TokenScanner) *stmt {
 
 func Or(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Or"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenOr {
 			return
 		}
@@ -116,7 +116,7 @@ func Or(scanner TokenScanner) *stmt {
 			return
 		}
 		var right Value
-		if right, err = e.next.Value(val); err != nil {
+		if right, err = e.next.Value(val, ctx); err != nil {
 			return
 		}
 		ret = val.Or(right)
@@ -127,7 +127,7 @@ func Or(scanner TokenScanner) *stmt {
 
 func And(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "And"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenAnd {
 			return
 		}
@@ -137,7 +137,7 @@ func And(scanner TokenScanner) *stmt {
 			return
 		}
 		var right Value
-		if right, err = e.next.Value(val); err != nil {
+		if right, err = e.next.Value(val, ctx); err != nil {
 			return
 		}
 		ret = val.And(right)
@@ -148,13 +148,13 @@ func And(scanner TokenScanner) *stmt {
 
 func Compare(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Compare"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenEqual, TokenNotEqual:
 			matched = true
 			scanner.Forward()
 			var right Value
-			right, err = e.next.Value(val)
+			right, err = e.next.Value(val, ctx)
 			if err != nil {
 				return
 			}
@@ -168,7 +168,7 @@ func Compare(scanner TokenScanner) *stmt {
 			matched = true
 			scanner.Forward()
 			var right Value
-			right, err = e.next.Value(val)
+			right, err = e.next.Value(val, ctx)
 			if err != nil {
 				return
 			}
@@ -196,13 +196,13 @@ func Compare(scanner TokenScanner) *stmt {
 
 func AddOrMinus(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "AddOrMinus"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenAddition:
 			matched = true
 			scanner.Forward()
 			var term Value
-			if term, err = e.next.Value(val); err != nil {
+			if term, err = e.next.Value(val, ctx); err != nil {
 				return
 			}
 			ret, err = val.Add(term)
@@ -211,7 +211,7 @@ func AddOrMinus(scanner TokenScanner) *stmt {
 			matched = true
 			scanner.Forward()
 			var term Value
-			if term, err = e.next.Value(val); err != nil {
+			if term, err = e.next.Value(val, ctx); err != nil {
 				return
 			}
 			ret, err = val.Minus(term)
@@ -224,13 +224,13 @@ func AddOrMinus(scanner TokenScanner) *stmt {
 
 func MultiplyOrDevide(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "MultiplyOrDevide"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		switch token.Type {
 		case TokenMultiplication:
 			matched = true
 			scanner.Forward()
 			var term Value
-			if term, err = e.next.Value(val); err != nil {
+			if term, err = e.next.Value(val, ctx); err != nil {
 				return
 			}
 			ret, err = val.Multiply(term)
@@ -239,7 +239,7 @@ func MultiplyOrDevide(scanner TokenScanner) *stmt {
 			matched = true
 			scanner.Forward()
 			var term Value
-			if term, err = e.next.Value(val); err != nil {
+			if term, err = e.next.Value(val, ctx); err != nil {
 				return
 			}
 			ret, err = val.Devide(term)
@@ -252,14 +252,14 @@ func MultiplyOrDevide(scanner TokenScanner) *stmt {
 
 func Mod(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Mod"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenMod {
 			return
 		}
 		matched = true
 		scanner.Forward()
 		var term Value
-		if term, err = e.next.Value(val); err != nil {
+		if term, err = e.next.Value(val, ctx); err != nil {
 			return
 		}
 		ret, err = val.Mod(term)
@@ -268,9 +268,9 @@ func Mod(scanner TokenScanner) *stmt {
 	return e
 }
 
-func Call(scanner TokenScanner, ctx Context) *stmt {
+func Call(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Call"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if !(val.Type == ValueIdentifier && e.scanner.Token().Type == TokenParenthesesOpen) {
 			return
 		}
@@ -289,14 +289,14 @@ func Call(scanner TokenScanner, ctx Context) *stmt {
 
 func Dot(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Dot"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenDot {
 			return
 		}
 		matched = true
 		scanner.Forward()
 		var right Value
-		right, err = e.next.Value(NullValue())
+		right, err = e.next.Value(NullValue(), ctx)
 		if err != nil {
 			return
 		}
@@ -312,7 +312,7 @@ func Dot(scanner TokenScanner) *stmt {
 
 func Range(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Range"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		if token.Type != TokenRange {
 			return
 		}
@@ -329,7 +329,7 @@ func Range(scanner TokenScanner) *stmt {
 			return
 		}
 		var right Value
-		right, err = e.next.Value(val)
+		right, err = e.next.Value(val, ctx)
 		if err != nil {
 			return
 		}
@@ -348,15 +348,15 @@ func Range(scanner TokenScanner) *stmt {
 	return e
 }
 
-func Factor(scanner TokenScanner, ctx Context) *stmt {
+func Factor(scanner TokenScanner) *stmt {
 	e := &stmt{scanner: scanner, name: "Factor"}
-	e.handle = func(val Value, token *Token) (matched bool, ret Value, err error) {
+	e.handle = func(val Value, ctx Context, token *Token) (matched bool, ret Value, err error) {
 		scanner.Forward()
 		switch token.Type {
 		case TokenIdentifier:
 			ret = Value{Type: ValueIdentifier, Value: &identifier{
 				name: token.Raw,
-				vars: ctx,
+				vars: ctx.Copy(),
 			}}
 		case TokenExit:
 			Exit()
@@ -417,6 +417,7 @@ type stmtExecutor struct {
 	scanner TokenScanner
 	expr    *stmt
 	value   Value
+	ctx     Context
 	opt     *option
 	exited  bool
 }
@@ -443,21 +444,22 @@ func NewStmtExecutor(scanner TokenScanner, ctx Context, opts ...StmtOption) *stm
 		AddOrMinus(scanner),
 		MultiplyOrDevide(scanner),
 		Mod(scanner),
-		Call(scanner, ctx),
+		Call(scanner),
 		Dot(scanner),
 		Range(scanner),
-		Factor(scanner, ctx),
+		Factor(scanner),
 	})
 	opt := &option{}
 	for _, apply := range opts {
 		apply(opt)
 	}
-	return &stmtExecutor{expr: es.init(opt), scanner: scanner, opt: opt}
+	return &stmtExecutor{
+		expr: es.init(opt), scanner: scanner, opt: opt,
+		ctx: ctx,
+	}
 }
 
 func (ns *stmtExecutor) Execute() (err error) {
-	ns.scanner.PushEnds(TokenSemicolon)
-	defer ns.scanner.PopEnds(TokenSemicolon)
 	defer func() {
 		if ns.scanner.Token().Type != TokenEOF {
 			ns.scanner.Forward()
@@ -475,15 +477,24 @@ func (ns *stmtExecutor) Execute() (err error) {
 	var end bool
 	var returned bool
 	var val Value
+	if ns.ctx == nil {
+		ns.ctx = NewContext()
+	}
+	ns.ctx.PushScope()
+	defer ns.ctx.PopScope()
 	for {
 		if end, err = ns.scanner.Scan(); end || err != nil {
 			return
+		}
+		if ns.scanner.Token().Type == TokenSemicolon {
+			ns.scanner.Forward()
+			continue
 		}
 		if returned {
 			// drop all the rest token
 			continue
 		}
-		if val, err = ns.expr.Value(val); err != nil {
+		if val, err = ns.expr.Value(val, ns.ctx); err != nil {
 			return
 		}
 		if val.Type == ValueReturn {

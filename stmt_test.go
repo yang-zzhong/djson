@@ -87,7 +87,7 @@ func TestStmt_assignation(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	vs := NewContext()
+	vs := NewContext(Variable{Name: []byte{'a'}})
 	expr := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestStmt_assignationWithReduction(t *testing.T) {
 		{Type: TokenAddition},
 		{Type: TokenNumber, Raw: []byte{'3'}},
 	})
-	vs := NewContext()
+	vs := NewContext(Variable{Name: []byte{'a'}})
 	expr := NewStmtExecutor(NewTokenScanner(g), vs)
 	if err := expr.Execute(); err != nil {
 		t.Fatal(err)

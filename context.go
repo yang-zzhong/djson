@@ -5,8 +5,11 @@ import "bytes"
 type Context interface {
 	Assign(varName []byte, val Value)
 	ValueOf(name []byte) Value
-	popMe()
+	PushScope()
+	PopScope()
+	Copy() Context
 	pushMe(val Value)
+	popMe()
 }
 
 type Variable struct {
@@ -14,48 +17,118 @@ type Variable struct {
 	Value Value
 }
 
-type ctx []Variable
+type scope struct {
+	p    *scope
+	vars []Variable
+}
+
+type ctx struct {
+	scope *scope
+}
 
 var _ Context = &ctx{}
 
 func NewContext(vars ...Variable) *ctx {
-	ret := ctx(vars)
-	return &ret
+	s := &scope{vars: vars}
+	return &ctx{
+		scope: s,
+	}
+}
+
+func (s *scope) assign(name []byte, val Value) {
+	if idx := s.indexOf(name); idx > -1 {
+		s.vars[idx] = Variable{Name: name, Value: val}
+		return
+	}
+	s.vars = append(s.vars, Variable{Name: name, Value: val})
+}
+
+func (s *scope) copy() *scope {
+	var p *scope
+	if s.p != nil {
+		p = s.p.copy()
+	}
+	r := &scope{
+		p:    p,
+		vars: make([]Variable, len(s.vars)),
+	}
+	copy(r.vars, s.vars)
+	return s
+}
+
+func (s *scope) indexOf(name []byte) int {
+	for i := range s.vars {
+		if bytes.Equal(s.vars[i].Name, name) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *scope) del(idx int) {
+	s.vars = append(s.vars[:idx], s.vars[idx+1:]...)
+}
+
+func (s *scope) valueOf(name []byte) Value {
+	if idx := s.indexOf(name); idx > -1 {
+		return s.vars[idx].Value
+	}
+	return NullValue()
 }
 
 func (v *ctx) Assign(name []byte, val Value) {
-	for i := range *v {
-		if bytes.Equal((*v)[i].Name, name) {
-			(*v)[i] = Variable{Name: name, Value: val}
+	scope := v.scope
+	for scope != nil {
+		if idx := scope.indexOf(name); idx > -1 {
+			scope.vars[idx] = Variable{Name: name, Value: val}
 			return
 		}
+		scope = scope.p
 	}
-	*v = append(*v, Variable{Name: name, Value: val})
+	v.scope.assign(name, val)
+}
+
+func (v *ctx) Copy() Context {
+	return &ctx{scope: v.scope.copy()}
+}
+
+func (v *ctx) PushScope() {
+	v.scope = &scope{p: v.scope}
+}
+
+func (v *ctx) PopScope() {
+	if v.scope != nil && v.scope.p != nil {
+		v.scope = v.scope.p
+	}
 }
 
 func (v *ctx) ValueOf(name []byte) Value {
-	for i := range *v {
-		if bytes.Equal((*v)[i].Name, name) {
-			return (*v)[i].Value
+	scope := v.scope
+	for scope != nil {
+		if idx := scope.indexOf(name); idx > -1 {
+			return scope.vars[idx].Value
 		}
+		scope = scope.p
 	}
-	return Value{Type: ValueNull}
+	return NullValue()
 }
 
 func (v *ctx) pushMe(val Value) {
 	mk := []byte{'_', 'm', 'e'}
-	me := v.ValueOf(mk)
-	if me.Type != ValueNull {
-		val.p = &me
+	if idx := v.scope.indexOf(mk); idx > -1 {
+		val.p = &v.scope.vars[idx].Value
 	}
-	v.Assign(mk, val)
+	v.scope.assign(mk, val)
 }
 
 func (v *ctx) popMe() {
-	mk := []byte{'_'}
-	me := v.ValueOf(mk)
-	if me.p != nil {
-		v.Assign(mk, *me.p)
+	mk := []byte{'_', 'm', 'e'}
+	if idx := v.scope.indexOf(mk); idx > -1 {
+		if v.scope.vars[idx].Value.p != nil {
+			v.scope.assign(mk, *v.scope.vars[idx].Value.p)
+			return
+		}
+		v.scope.del(idx)
 	}
 }
 
@@ -76,14 +149,9 @@ func splitKeyAndRest(ik []byte) (k []byte, rest []byte) {
 
 func (vs ctx) lookup(k []byte) Value {
 	i, r := splitKeyAndRest(k)
-	for _, v := range vs {
-		if !bytes.Equal(v.Name, i) {
-			continue
-		}
-		if len(r) == 0 {
-			return v.Value
-		}
-		return v.Value.lookup(r)
+	val := vs.ValueOf(i)
+	if len(r) == 0 {
+		return val
 	}
-	return Value{Type: ValueNull}
+	return val.lookup(r)
 }
