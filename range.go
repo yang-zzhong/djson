@@ -21,17 +21,19 @@ func NewRange(from, to int) *range_ {
 	return rg
 }
 
-func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
-	offset := scanner.Offset()
+func mapRange(val Value, scanner TokenScanner, ctx Context) (ret Value, err error) {
+	resetableScanner := NewTokenRecordScanner(scanner)
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
+	stmt := NewStmtExecutor(resetableScanner, ctx)
+	ctx.pushMe(val)
+	defer ctx.popMe()
 	r := NewArray()
 	val.Value.(ItemEachable).Each(func(i int, val Value) bool {
-		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, IntValue(int64(i)))
-		vars.Assign([]byte{'v'}, val)
-		stmt := NewStmtExecutor(scanner, vars)
-		if err = stmt.Execute(); err != nil {
+		resetableScanner.Reset()
+		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
+		stmt.AssignVar([]byte{'v'}, val)
+		if err = stmt.Execute(For(NullValue())); err != nil {
 			return false
 		}
 		if stmt.Exited() {
@@ -44,16 +46,18 @@ func mapRange(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 	return
 }
 
-func eachRange(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
-	offset := scanner.Offset()
+func eachRange(val Value, scanner TokenScanner, ctx Context) (ret Value, err error) {
+	resetableScanner := NewTokenRecordScanner(scanner)
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
+	stmt := NewStmtExecutor(resetableScanner, ctx)
+	ctx.pushMe(val)
+	defer ctx.popMe()
 	val.Value.(ItemEachable).Each(func(i int, val Value) bool {
-		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, IntValue(int64(i)))
-		vars.Assign([]byte{'v'}, val)
-		stmt := NewStmtExecutor(scanner, vars)
-		if err = stmt.Execute(); err != nil {
+		resetableScanner.Reset()
+		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
+		stmt.AssignVar([]byte{'v'}, val)
+		if err = stmt.Execute(For(NullValue())); err != nil {
 			return false
 		}
 		if stmt.Exited() {

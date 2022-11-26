@@ -32,7 +32,7 @@ const (
 	TokenNull                               // null
 	TokenTrue                               // true
 	TokenFalse                              // false
-	TokenReduction                          // =>
+	TokenReduction                          // => ->
 	TokenNumber                             // number
 	TokenString                             // string
 	TokenRange                              // ... // [1 ... 10].map({"key": "" + v + "_x"})
@@ -86,10 +86,10 @@ func (t Token) Name() string {
 		TokenFalse:            "False",            // false
 		TokenReduction:        "Reduction",        // =>
 		TokenNumber:           "Number",           // number
-		TokenMod:              "Mod",
-		TokenString:           "String",     // string
-		TokenRange:            "Range",      // ... // [1 ... 10].map({"key": "" + v + "_x"})
-		TokenIdentifier:       "Identifier", // identifier
-		TokenWhitespace:       "Whitespace",
+		TokenMod:              "Mod",              // mod
+		TokenString:           "String",           // string
+		TokenRange:            "Range",            // ... // [1 ... 10].map({"key": "" + v + "_x"})
+		TokenIdentifier:       "Identifier",       // identifier
+		TokenWhitespace:       "Whitespace",       // whitespace
 	}[t.Type]
 }

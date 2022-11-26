@@ -42,32 +42,32 @@ func TestTokenScanner_next(t *testing.T) {
 		{Type: TokenParenthesesClose, Row: 6, Col: 33},
 		{Type: TokenEOF, Row: 7, Col: 0},
 	})
-	scanner := NewTokenScanner(lex)
+	scanner := NewTokenRecordScanner(NewTokenScanner(lex)).(*tokenRecordScanner)
 	scanner.PushEnds(TokenEOF)
-	scanner.SetOffset(2)
-	if _, err := scanner.Scan(); err != nil {
-		t.Fatal(err)
+	for i := 0; i < 5; i++ {
+		if _, err := scanner.Scan(); err != nil {
+			t.Fatal(err)
+		}
+		scanner.Forward()
 	}
-	if scanner.token.Type != TokenBraceOpen {
+	scanner.Reset()
+	scanner.Scan()
+	if scanner.Token().Type != TokenIdentifier {
 		t.Fatal("token type not match")
-	}
-	offset := scanner.Offset()
-	if offset != 2 {
-		t.Fatal("get offset failed")
 	}
 	scanner.Forward()
 	if _, err := scanner.Scan(); err != nil {
 		t.Fatal(err)
 	}
-	if scanner.token.Type != TokenString {
+	if scanner.Token().Type != TokenAssignation {
 		t.Fatal("token type not match after forward")
 	}
 	scanner.PushEnds(TokenAddition)
-	if scanner.endsWhen.when[TokenAddition] != 1 {
+	if scanner.tokenScanner.(*tokenScanner).endsWhen.when[TokenAddition] != 1 {
 		t.Fatal("push ends error")
 	}
 	scanner.PopEnds(TokenAddition)
-	if scanner.endsWhen.when[TokenAddition] != 0 {
+	if scanner.tokenScanner.(*tokenScanner).endsWhen.when[TokenAddition] != 0 {
 		t.Fatal("pop ends error")
 	}
 }

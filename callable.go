@@ -50,13 +50,13 @@ func (c *CallableRegister) caseInsensitiveCallback(k string) (Callback, bool) {
 	return nil, false
 }
 
-func ifCall(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
-	vars.pushMe(val)
-	defer vars.popMe()
+func ifCall(val Value, scanner TokenScanner, ctx Context) (ret Value, err error) {
+	ctx.pushMe(val)
+	defer ctx.popMe()
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
-	expr := NewStmtExecutor(scanner, vars)
-	if err = expr.Execute(); err != nil {
+	expr := NewStmtExecutor(scanner, ctx)
+	if err = expr.Execute(For(NullValue())); err != nil {
 		return
 	}
 	if expr.Exited() {

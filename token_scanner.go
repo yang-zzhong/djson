@@ -40,38 +40,36 @@ type TokenScanner interface {
 	Forward()
 	PushEnds(...TokenType)
 	PopEnds(...TokenType)
-	Offset() int
-	SetOffset(int)
 	Scan() (end bool, err error)
 	Token() *Token
+	ShouldEnd(token *Token) bool
 	EndAt() TokenType
 }
 
 type tokenScanner struct {
-	lexer      Lexer
-	tokens     []*Token
-	readOffset int
-	token      *Token
-	endsWhen   *endsWhen
+	lexer            Lexer
+	token            Token
+	endsWhen         *endsWhen
+	forwardRequested bool
 }
 
 var _ TokenScanner = &tokenScanner{}
 
 func NewTokenScanner(l Lexer, ends ...TokenType) *tokenScanner {
 	n := &tokenScanner{
-		lexer:    l,
-		token:    &Token{},
-		endsWhen: newEndsWhen(),
+		lexer:            l,
+		endsWhen:         newEndsWhen(),
+		forwardRequested: true,
 	}
 	return n
 }
 
 func (t *tokenScanner) Forward() {
-	t.readOffset++
+	t.forwardRequested = true
 }
 
 func (ts *tokenScanner) Token() *Token {
-	return ts.token
+	return &ts.token
 }
 
 func (t *tokenScanner) PushEnds(tt ...TokenType) {
@@ -82,47 +80,92 @@ func (t *tokenScanner) PopEnds(tt ...TokenType) {
 	t.endsWhen.pop(tt...)
 }
 
-func (t *tokenScanner) Offset() int {
-	return t.readOffset
-}
-
-func (t *tokenScanner) SetOffset(offset int) {
-	t.readOffset = offset
-}
-
 func (t *tokenScanner) Scan() (end bool, err error) {
-	for i := len(t.tokens); i <= t.readOffset; i++ {
-		if len(t.tokens) > 0 && t.tokens[len(t.tokens)-1].Type == TokenEOF {
-			break
-		}
-		token := &Token{}
-		if err = t.lexer.NextToken(token); err != nil {
+	defer func() {
+		end = t.ShouldEnd(&t.token)
+	}()
+	if !t.forwardRequested {
+		return
+	}
+	t.forwardRequested = false
+	for {
+		if err = t.lexer.NextToken(&t.token); err != nil {
 			return
 		}
 		// skip comment
-		if token.Type == TokenComment {
-			i--
+		if t.token.Type == TokenComment {
 			continue
 		}
-		t.tokens = append(t.tokens, token)
-	}
-	if len(t.tokens) <= t.readOffset {
-		end = true
 		return
 	}
-	t.token = t.tokens[t.readOffset]
-	if t.token.Type == TokenEOF {
-		end = true
-		return
-	}
-	end = t.EndReached()
-	return
 }
 
-func (t *tokenScanner) EndReached() bool {
-	return t.endsWhen.ended(t.token.Type)
+func (t *tokenScanner) ShouldEnd(token *Token) bool {
+	return token.Type == TokenEOF || t.endsWhen.ended(token.Type)
 }
 
 func (t *tokenScanner) EndAt() TokenType {
 	return t.token.Type
+}
+
+type tokenRecordScanner struct {
+	tokenScanner TokenScanner
+	tokens       []*Token
+	token        Token
+	readOffset   int
+}
+
+type ResetableTokenScanner interface {
+	TokenScanner
+	Reset()
+}
+
+func NewTokenRecordScanner(tokenScanner TokenScanner) ResetableTokenScanner {
+	return &tokenRecordScanner{
+		tokenScanner: tokenScanner,
+	}
+}
+
+func (t *tokenRecordScanner) Forward() {
+	t.tokenScanner.Forward()
+	t.readOffset++
+}
+
+func (ts *tokenRecordScanner) Token() *Token {
+	token := ts.token
+	return &token
+}
+
+func (t *tokenRecordScanner) PushEnds(tt ...TokenType) {
+	t.tokenScanner.PushEnds(tt...)
+}
+
+func (t *tokenRecordScanner) PopEnds(tt ...TokenType) {
+	t.tokenScanner.PopEnds(tt...)
+}
+
+func (t *tokenRecordScanner) Reset() {
+	t.readOffset = 0
+}
+
+func (t *tokenRecordScanner) Scan() (end bool, err error) {
+	if t.readOffset >= len(t.tokens) {
+		var token Token
+		if _, err = t.tokenScanner.Scan(); err != nil {
+			return
+		}
+		token = *t.tokenScanner.Token()
+		t.tokens = append(t.tokens, &token)
+	}
+	t.token = *t.tokens[t.readOffset]
+	end = t.ShouldEnd(&t.token)
+	return
+}
+
+func (t *tokenRecordScanner) EndAt() TokenType {
+	return t.token.Type
+}
+
+func (t *tokenRecordScanner) ShouldEnd(token *Token) bool {
+	return t.tokenScanner.ShouldEnd(token)
 }

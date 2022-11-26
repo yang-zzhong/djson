@@ -459,7 +459,26 @@ func NewStmtExecutor(scanner TokenScanner, ctx Context, opts ...StmtOption) *stm
 	}
 }
 
-func (ns *stmtExecutor) Execute() (err error) {
+type stmtExecOption struct {
+	endWhen   []TokenType
+	val       Value
+	valSetted bool
+}
+
+func For(val Value) func(opt *stmtExecOption) {
+	return func(opt *stmtExecOption) {
+		opt.val = val
+		opt.valSetted = true
+	}
+}
+
+func EndWhen(tt ...TokenType) func(opt *stmtExecOption) {
+	return func(opt *stmtExecOption) {
+		opt.endWhen = tt
+	}
+}
+
+func (ns *stmtExecutor) Execute(applyOpt ...func(opt *stmtExecOption)) (err error) {
 	defer func() {
 		if ns.scanner.Token().Type != TokenEOF {
 			ns.scanner.Forward()
@@ -479,6 +498,17 @@ func (ns *stmtExecutor) Execute() (err error) {
 	var val Value
 	if ns.ctx == nil {
 		ns.ctx = NewContext()
+	}
+	var opt stmtExecOption
+	for _, apply := range applyOpt {
+		apply(&opt)
+	}
+	if opt.valSetted {
+		ns.value = opt.val
+	}
+	if len(opt.endWhen) > 0 {
+		ns.scanner.PushEnds(opt.endWhen...)
+		defer ns.scanner.PopEnds(opt.endWhen...)
 	}
 	ns.ctx.PushScope()
 	defer ns.ctx.PopScope()
@@ -503,6 +533,10 @@ func (ns *stmtExecutor) Execute() (err error) {
 		}
 		ns.value = val
 	}
+}
+
+func (ns *stmtExecutor) AssignVar(name []byte, val Value) {
+	ns.ctx.Assign(name, val)
 }
 
 func (ns *stmtExecutor) Exited() bool {

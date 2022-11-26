@@ -3,7 +3,7 @@ package djson
 import "testing"
 
 func TestArray_set(t *testing.T) {
-	// arr.set(k == 0 => 4)
+	// arr.set(k == 0 -> 4)
 	arr := NewArray(
 		IntValue(int64(1)),
 		IntValue(int64(2)),

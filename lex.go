@@ -475,6 +475,7 @@ func NewLexer(source io.Reader, bufSize uint) *lexer {
 			CharsMatcher([]byte{'e', 'x', 'i', 't'}, TokenExit),
 			CharsMatcher([]byte{'r', 'e', 't', 'u', 'r', 'n'}, TokenReturn),
 			CharsMatcher([]byte{'=', '>'}, TokenReduction),
+			CharsMatcher([]byte{'-', '>'}, TokenReduction),
 			CharsMatcher([]byte{'.', '.', '.'}, TokenRange),
 			IdentifierMatcher(),
 			WhitespaceMatcher(),
@@ -482,7 +483,7 @@ func NewLexer(source io.Reader, bufSize uint) *lexer {
 			StringMatcher(),
 			NumberMatcher(),
 			EOFMatcher(),
-		}, total: 38},
+		}, total: 39},
 	}
 }
 

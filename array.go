@@ -47,7 +47,7 @@ func NewArrayWithLength(length int) *array {
 
 func setArray(val Value, scanner TokenScanner, vars Context) (ret Value, err error) {
 	o := val.Value.(Array).Copy()
-	err = eachItemForSet(o, scanner, vars, func(val Value, idx int) error {
+	err = eachItemForSet(val, scanner, vars, func(val Value, idx int) error {
 		o.Set(idx, val)
 		return nil
 	})
@@ -56,9 +56,8 @@ func setArray(val Value, scanner TokenScanner, vars Context) (ret Value, err err
 }
 
 func delArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
-	o := caller.Value.(Array)
-	r := o.Copy()
-	err = eachArrayItem(o, scanner, vars, func(_ Value, idx int) error {
+	r := caller.Value.(Array).Copy()
+	err = eachArrayItem(caller, scanner, vars, func(_ Value, idx int) error {
 		r.Del(idx)
 		return nil
 	})
@@ -66,10 +65,9 @@ func delArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err 
 	return
 }
 
-func filterArray(caller Value, scanner TokenScanner, vars Context) (ret Value, err error) {
-	o := caller.Value.(*array)
+func filterArray(caller Value, scanner TokenScanner, ctx Context) (ret Value, err error) {
 	no := NewArray()
-	err = eachArrayItem(o, scanner, vars, func(val Value, idx int) error {
+	err = eachArrayItem(caller, scanner, ctx, func(val Value, idx int) error {
 		no.items = append(no.items, val)
 		return nil
 	})
@@ -77,22 +75,24 @@ func filterArray(caller Value, scanner TokenScanner, vars Context) (ret Value, e
 	return
 }
 
-func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
-	offset := scanner.Offset()
+func eachItemForSet(o Value, scanner TokenScanner, ctx Context, handle func(val Value, idx int) error) (err error) {
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
-	o.Each(func(i int, val Value) bool {
-		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, IntValue(int64(i)))
-		vars.Assign([]byte{'v'}, val)
-		expr := NewStmtExecutor(scanner, vars)
-		if err = expr.Execute(); err != nil {
+	resetableScanner := NewTokenRecordScanner(scanner)
+	stmt := NewStmtExecutor(resetableScanner, ctx)
+	ctx.pushMe(o)
+	defer ctx.popMe()
+	o.Value.(ItemEachable).Each(func(i int, val Value) bool {
+		resetableScanner.Reset()
+		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
+		stmt.AssignVar([]byte{'v'}, val)
+		if err = stmt.Execute(For(NullValue())); err != nil {
 			return false
 		}
-		if expr.Exited() {
+		if stmt.Exited() {
 			Exit()
 		}
-		p := expr.Value()
+		p := stmt.Value()
 		if p.Type == ValueNull {
 			return true
 		}
@@ -101,22 +101,24 @@ func eachItemForSet(o Array, scanner TokenScanner, vars Context, handle func(val
 	return
 }
 
-func eachArrayItem(o Array, scanner TokenScanner, vars Context, handle func(val Value, idx int) error) (err error) {
-	offset := scanner.Offset()
+func eachArrayItem(o Value, scanner TokenScanner, ctx Context, handle func(val Value, idx int) error) (err error) {
+	resetableScanner := NewTokenRecordScanner(scanner)
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
-	o.Each(func(i int, val Value) bool {
-		scanner.SetOffset(offset)
-		vars.Assign([]byte{'i'}, IntValue(int64(i)))
-		vars.Assign([]byte{'v'}, val)
-		expr := NewStmtExecutor(scanner, vars)
-		if err = expr.Execute(); err != nil {
+	stmt := NewStmtExecutor(resetableScanner, ctx)
+	ctx.pushMe(o)
+	defer ctx.popMe()
+	o.Value.(ItemEachable).Each(func(i int, val Value) bool {
+		resetableScanner.Reset()
+		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
+		stmt.AssignVar([]byte{'v'}, val)
+		if err = stmt.Execute(For(NullValue())); err != nil {
 			return false
 		}
-		if expr.Exited() {
+		if stmt.Exited() {
 			Exit()
 		}
-		if !expr.value.Bool() {
+		if !stmt.value.Bool() {
 			return true
 		}
 		handle(val, i)

@@ -50,9 +50,8 @@ func NewObject(pairs ...*pair) *object {
 }
 
 func setObject(val Value, nexter TokenScanner, vars Context) (ret Value, err error) {
-	o := val.Value.(Object)
-	r := o.Copy()
-	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
+	r := val.Value.(Object).Copy()
+	err = eachObjectItemForSet(val, nexter, vars, func(k []byte, val Value) error {
 		r.Set(k, val)
 		return nil
 	})
@@ -61,9 +60,8 @@ func setObject(val Value, nexter TokenScanner, vars Context) (ret Value, err err
 }
 
 func replaceObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
-	o := caller.Value.(Object)
-	r := o.Copy()
-	err = eachObjectItemForSet(o, nexter, vars, func(k []byte, val Value) error {
+	r := caller.Value.(Object).Copy()
+	err = eachObjectItemForSet(caller, nexter, vars, func(k []byte, val Value) error {
 		if val.Type != ValueObject {
 			return errors.New("replace only support a object as Value")
 		}
@@ -80,9 +78,8 @@ func replaceObject(caller Value, nexter TokenScanner, vars Context) (ret Value, 
 }
 
 func getObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
-	o := caller.Value.(*object)
 	no := NewObject()
-	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {
+	err = eachObjectItem(caller, nexter, vars, func(k []byte, val Value) error {
 		no.Set(k, val)
 		return nil
 	})
@@ -91,9 +88,8 @@ func getObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err 
 }
 
 func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
-	o := caller.Value.(Object)
-	r := o.Copy()
-	err = eachObjectItem(o, nexter, vars, func(k []byte, val Value) error {
+	r := caller.Value.(Object).Copy()
+	err = eachObjectItem(caller, nexter, vars, func(k []byte, val Value) error {
 		r.Del(k)
 		return nil
 	})
@@ -101,22 +97,24 @@ func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err 
 	return
 }
 
-func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
-	offset := nexter.Offset()
-	nexter.PushEnds(TokenParenthesesClose)
-	defer nexter.PopEnds(TokenParenthesesClose)
-	o.Each(func(k []byte, val Value) bool {
-		nexter.SetOffset(offset)
-		vars.Assign([]byte{'k'}, StringValue(k...))
-		vars.Assign([]byte{'v'}, val)
-		expr := NewStmtExecutor(nexter, vars)
-		if err = expr.Execute(); err != nil {
+func eachObjectItemForSet(caller Value, nexter TokenScanner, ctx Context, handle func(k []byte, val Value) error) (err error) {
+	scanner := NewTokenRecordScanner(nexter)
+	scanner.PushEnds(TokenParenthesesClose)
+	defer scanner.PopEnds(TokenParenthesesClose)
+	stmt := NewStmtExecutor(scanner, ctx)
+	ctx.pushMe(caller)
+	defer ctx.popMe()
+	caller.Value.(PairEachable).Each(func(k []byte, val Value) bool {
+		scanner.Reset()
+		ctx.Assign([]byte{'k'}, StringValue(k...))
+		ctx.Assign([]byte{'v'}, val)
+		if err = stmt.Execute(); err != nil {
 			return false
 		}
-		if expr.Exited() {
+		if stmt.Exited() {
 			Exit()
 		}
-		p := expr.Value()
+		p := stmt.Value()
 		if p.Type == ValueNull {
 			return true
 		}
@@ -125,22 +123,24 @@ func eachObjectItemForSet(o Object, nexter TokenScanner, vars Context, handle fu
 	return
 }
 
-func eachObjectItem(o Object, nexter TokenScanner, vars Context, handle func(k []byte, val Value) error) (err error) {
-	offset := nexter.Offset()
+func eachObjectItem(caller Value, nexter TokenScanner, ctx Context, handle func(k []byte, val Value) error) (err error) {
+	scanner := NewTokenRecordScanner(nexter)
 	nexter.PushEnds(TokenParenthesesClose)
 	defer nexter.PopEnds(TokenParenthesesClose)
-	o.Each(func(k []byte, val Value) bool {
-		nexter.SetOffset(offset)
-		vars.Assign([]byte{'k'}, StringValue(k...))
-		vars.Assign([]byte{'v'}, val)
-		expr := NewStmtExecutor(nexter, vars)
-		if err = expr.Execute(); err != nil {
+	stmt := NewStmtExecutor(scanner, ctx)
+	ctx.pushMe(caller)
+	defer ctx.popMe()
+	caller.Value.(PairEachable).Each(func(k []byte, val Value) bool {
+		scanner.Reset()
+		ctx.Assign([]byte{'k'}, StringValue(k...))
+		ctx.Assign([]byte{'v'}, val)
+		if err = stmt.Execute(); err != nil {
 			return false
 		}
-		if expr.Exited() {
+		if stmt.Exited() {
 			Exit()
 		}
-		if !expr.value.Bool() {
+		if !stmt.value.Bool() {
 			return true
 		}
 		return handle(k, val) == nil
@@ -281,12 +281,12 @@ func (obj *object) Each(handle func(k []byte, val Value) bool) {
 
 type objectExecutor struct {
 	scanner TokenScanner
-	vars    Context
+	ctx     Context
 	value   Value
 }
 
 func newObjectExecutor(scanner TokenScanner, vars Context) *objectExecutor {
-	return &objectExecutor{scanner: scanner, vars: vars}
+	return &objectExecutor{scanner: scanner, ctx: vars}
 }
 
 func (e *objectExecutor) execute() (err error) {
@@ -297,39 +297,30 @@ func (e *objectExecutor) execute() (err error) {
 func (e *objectExecutor) pairs() (ret Value, err error) {
 	val := NewObject()
 	ret = ObjectValue(val)
-	e.vars.pushMe(ObjectValue(val))
-	defer e.vars.popMe()
+	stmt := NewStmtExecutor(e.scanner, e.ctx)
+	e.ctx.pushMe(ObjectValue(val))
+	defer e.ctx.popMe()
 	for {
-		expr := NewStmtExecutor(e.scanner, e.vars)
-		func() {
-			e.scanner.PushEnds(TokenColon)
-			defer e.scanner.PopEnds(TokenColon)
-			err = expr.Execute()
-		}()
-		if expr.Exited() {
+		err = stmt.Execute(For(NullValue()), EndWhen(TokenColon))
+		if stmt.Exited() {
 			Exit()
 		}
-		if err != nil || expr.value.Type == ValueNull {
+		if err != nil || stmt.value.Type == ValueNull {
 			return
 		}
-		if expr.value.Type != ValueString {
-			err = fmt.Errorf("object key [%v] must be string", expr.value.Value)
+		if stmt.value.Type != ValueString {
+			err = fmt.Errorf("object key [%v] must be string", stmt.value.Value)
 			return
 		}
-		key := expr.value.Value.(String).Bytes()
-		func() {
-			e.scanner.PushEnds(TokenComma, TokenBraceClose)
-			defer e.scanner.PopEnds(TokenComma, TokenBraceClose)
-			expr = NewStmtExecutor(e.scanner, e.vars)
-			expr.Execute()
-		}()
-		if expr.Exited() {
+		key := stmt.value.Value.(String).Bytes()
+		stmt.Execute(For(NullValue()), EndWhen(TokenComma, TokenBraceClose))
+		if stmt.Exited() {
 			Exit()
 		}
 		if err != nil {
 			return
 		}
-		val.Set(key, expr.value)
+		val.Set(key, stmt.value)
 		if e.scanner.EndAt() == TokenBraceClose {
 			return
 		}
