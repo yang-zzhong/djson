@@ -78,12 +78,12 @@ func filterArray(caller Value, scanner TokenScanner, ctx Context) (ret Value, er
 func eachItemForSet(o Value, scanner TokenScanner, ctx Context, handle func(val Value, idx int) error) (err error) {
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
-	resetableScanner := NewTokenRecordScanner(scanner)
+	resetableScanner := NewCachedTokenScanner(scanner)
 	stmt := NewStmtExecutor(resetableScanner, ctx)
 	ctx.pushMe(o)
 	defer ctx.popMe()
 	o.Value.(ItemEachable).Each(func(i int, val Value) bool {
-		resetableScanner.Reset()
+		resetableScanner.ResetRead()
 		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
 		stmt.AssignVar([]byte{'v'}, val)
 		if err = stmt.Execute(For(NullValue())); err != nil {
@@ -102,14 +102,14 @@ func eachItemForSet(o Value, scanner TokenScanner, ctx Context, handle func(val 
 }
 
 func eachArrayItem(o Value, scanner TokenScanner, ctx Context, handle func(val Value, idx int) error) (err error) {
-	resetableScanner := NewTokenRecordScanner(scanner)
+	resetableScanner := NewCachedTokenScanner(scanner)
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
 	stmt := NewStmtExecutor(resetableScanner, ctx)
 	ctx.pushMe(o)
 	defer ctx.popMe()
 	o.Value.(ItemEachable).Each(func(i int, val Value) bool {
-		resetableScanner.Reset()
+		resetableScanner.ResetRead()
 		stmt.AssignVar([]byte{'i'}, IntValue(int64(i)))
 		stmt.AssignVar([]byte{'v'}, val)
 		if err = stmt.Execute(For(NullValue())); err != nil {

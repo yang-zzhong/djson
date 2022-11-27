@@ -42,7 +42,7 @@ func TestTokenScanner_next(t *testing.T) {
 		{Type: TokenParenthesesClose, Row: 6, Col: 33},
 		{Type: TokenEOF, Row: 7, Col: 0},
 	})
-	scanner := NewTokenRecordScanner(NewTokenScanner(lex)).(*tokenRecordScanner)
+	scanner := NewCachedTokenScanner(NewTokenScanner(lex)).(*tokenRecordScanner)
 	scanner.PushEnds(TokenEOF)
 	for i := 0; i < 5; i++ {
 		if _, err := scanner.Scan(); err != nil {
@@ -50,7 +50,7 @@ func TestTokenScanner_next(t *testing.T) {
 		}
 		scanner.Forward()
 	}
-	scanner.Reset()
+	scanner.ResetRead()
 	scanner.Scan()
 	if scanner.Token().Type != TokenIdentifier {
 		t.Fatal("token type not match")

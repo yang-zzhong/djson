@@ -43,6 +43,7 @@ var _ Object = &object{}
 func NewObject(pairs ...*pair) *object {
 	obj := &object{pairs: pairs, CallableRegister: NewCallableRegister("object")}
 	obj.RegisterCall("map", setObject)
+	obj.RegisterCall("trans", transObject)
 	obj.RegisterCall("replace", replaceObject)
 	obj.RegisterCall("del", delObject)
 	obj.RegisterCall("filter", getObject)
@@ -77,6 +78,20 @@ func replaceObject(caller Value, nexter TokenScanner, vars Context) (ret Value, 
 	return
 }
 
+func transObject(caller Value, scanner TokenScanner, ctx Context) (ret Value, err error) {
+	scanner.PushEnds(TokenParenthesesClose)
+	defer scanner.PopEnds(TokenParenthesesClose)
+	o := caller.Copy()
+	ctx.pushMe(o)
+	defer ctx.popMe()
+	stmt := NewStmtExecutor(scanner, ctx)
+	if err = stmt.Execute(); err != nil {
+		return
+	}
+	ret = o
+	return
+}
+
 func getObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err error) {
 	no := NewObject()
 	err = eachObjectItem(caller, nexter, vars, func(k []byte, val Value) error {
@@ -98,14 +113,14 @@ func delObject(caller Value, nexter TokenScanner, vars Context) (ret Value, err 
 }
 
 func eachObjectItemForSet(caller Value, nexter TokenScanner, ctx Context, handle func(k []byte, val Value) error) (err error) {
-	scanner := NewTokenRecordScanner(nexter)
+	scanner := NewCachedTokenScanner(nexter)
 	scanner.PushEnds(TokenParenthesesClose)
 	defer scanner.PopEnds(TokenParenthesesClose)
 	stmt := NewStmtExecutor(scanner, ctx)
 	ctx.pushMe(caller)
 	defer ctx.popMe()
 	caller.Value.(PairEachable).Each(func(k []byte, val Value) bool {
-		scanner.Reset()
+		scanner.ResetRead()
 		ctx.Assign([]byte{'k'}, StringValue(k...))
 		ctx.Assign([]byte{'v'}, val)
 		if err = stmt.Execute(); err != nil {
@@ -124,14 +139,14 @@ func eachObjectItemForSet(caller Value, nexter TokenScanner, ctx Context, handle
 }
 
 func eachObjectItem(caller Value, nexter TokenScanner, ctx Context, handle func(k []byte, val Value) error) (err error) {
-	scanner := NewTokenRecordScanner(nexter)
+	scanner := NewCachedTokenScanner(nexter)
 	nexter.PushEnds(TokenParenthesesClose)
 	defer nexter.PopEnds(TokenParenthesesClose)
 	stmt := NewStmtExecutor(scanner, ctx)
 	ctx.pushMe(caller)
 	defer ctx.popMe()
 	caller.Value.(PairEachable).Each(func(k []byte, val Value) bool {
-		scanner.Reset()
+		scanner.ResetRead()
 		ctx.Assign([]byte{'k'}, StringValue(k...))
 		ctx.Assign([]byte{'v'}, val)
 		if err = stmt.Execute(); err != nil {

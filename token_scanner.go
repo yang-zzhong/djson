@@ -1,49 +1,20 @@
 package djson
 
-type endsWhen struct {
-	when map[TokenType]int
-}
-
-func newEndsWhen() *endsWhen {
-	return &endsWhen{
-		when: make(map[TokenType]int, 16),
-	}
-}
-
-func (ew *endsWhen) push(tt ...TokenType) {
-	for _, t := range tt {
-		if v, ok := ew.when[t]; ok {
-			ew.when[t] = v + 1
-			continue
-		}
-		ew.when[t] = 1
-	}
-}
-
-func (ew *endsWhen) pop(tt ...TokenType) {
-	for _, t := range tt {
-		if v, ok := ew.when[t]; ok {
-			v -= 1
-			ew.when[t] = v
-		}
-	}
-}
-
-func (ew *endsWhen) ended(t TokenType) bool {
-	if v, ok := ew.when[t]; ok && v > 0 {
-		return true
-	}
-	return false
-}
-
 type TokenScanner interface {
 	Forward()
 	PushEnds(...TokenType)
 	PopEnds(...TokenType)
 	Scan() (end bool, err error)
 	Token() *Token
+	Copy() TokenScanner
 	ShouldEnd(token *Token) bool
 	EndAt() TokenType
+}
+
+type CachedTokenScanner interface {
+	TokenScanner
+	CacheToEnd() error
+	ResetRead()
 }
 
 type tokenScanner struct {
@@ -62,6 +33,15 @@ func NewTokenScanner(l Lexer, ends ...TokenType) *tokenScanner {
 		forwardRequested: true,
 	}
 	return n
+}
+
+func (t *tokenScanner) Copy() TokenScanner {
+	return &tokenScanner{
+		lexer:            t.lexer,
+		endsWhen:         t.endsWhen.copy(),
+		token:            t.token,
+		forwardRequested: t.forwardRequested,
+	}
 }
 
 func (t *tokenScanner) Forward() {
@@ -115,12 +95,7 @@ type tokenRecordScanner struct {
 	readOffset   int
 }
 
-type ResetableTokenScanner interface {
-	TokenScanner
-	Reset()
-}
-
-func NewTokenRecordScanner(tokenScanner TokenScanner) ResetableTokenScanner {
+func NewCachedTokenScanner(tokenScanner TokenScanner) CachedTokenScanner {
 	return &tokenRecordScanner{
 		tokenScanner: tokenScanner,
 	}
@@ -144,7 +119,7 @@ func (t *tokenRecordScanner) PopEnds(tt ...TokenType) {
 	t.tokenScanner.PopEnds(tt...)
 }
 
-func (t *tokenRecordScanner) Reset() {
+func (t *tokenRecordScanner) ResetRead() {
 	t.readOffset = 0
 }
 
@@ -162,10 +137,77 @@ func (t *tokenRecordScanner) Scan() (end bool, err error) {
 	return
 }
 
+func (t *tokenRecordScanner) CacheToEnd() error {
+	offset := t.readOffset
+	for {
+		if end, err := t.Scan(); err != nil || end {
+			t.readOffset = offset
+			return err
+		}
+		t.Forward()
+	}
+}
+
+func (t *tokenRecordScanner) Copy() TokenScanner {
+	ret := &tokenRecordScanner{
+		tokenScanner: t.tokenScanner.Copy(),
+		readOffset:   t.readOffset,
+		tokens:       make([]*Token, len(t.tokens)),
+	}
+	copy(ret.tokens, t.tokens)
+	return ret
+}
+
 func (t *tokenRecordScanner) EndAt() TokenType {
 	return t.token.Type
 }
 
 func (t *tokenRecordScanner) ShouldEnd(token *Token) bool {
 	return t.tokenScanner.ShouldEnd(token)
+}
+
+type endsWhen struct {
+	when map[TokenType]int
+}
+
+func newEndsWhen() *endsWhen {
+	return &endsWhen{
+		when: make(map[TokenType]int, 16),
+	}
+}
+
+func (ew *endsWhen) push(tt ...TokenType) {
+	for _, t := range tt {
+		if v, ok := ew.when[t]; ok {
+			ew.when[t] = v + 1
+			continue
+		}
+		ew.when[t] = 1
+	}
+}
+
+func (ew *endsWhen) copy() *endsWhen {
+	e := &endsWhen{
+		when: make(map[TokenType]int, 16),
+	}
+	for i, k := range ew.when {
+		e.when[i] = k
+	}
+	return e
+}
+
+func (ew *endsWhen) pop(tt ...TokenType) {
+	for _, t := range tt {
+		if v, ok := ew.when[t]; ok {
+			v -= 1
+			ew.when[t] = v
+		}
+	}
+}
+
+func (ew *endsWhen) ended(t TokenType) bool {
+	if v, ok := ew.when[t]; ok && v > 0 {
+		return true
+	}
+	return false
 }

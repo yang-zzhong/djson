@@ -2,8 +2,9 @@ package djson
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"os"
+	"strings"
 	"testing"
 )
 
@@ -250,11 +251,17 @@ func TestStmt_call(t *testing.T) {
 }
 
 func TestStmt_config(t *testing.T) {
-	f, err := os.Open("./testdata/config.djson")
-	if err != nil {
-		t.Fatal(err)
-	}
-	scanner := NewTokenScanner(NewLexer(f, 128))
+	data := `
+# a config test
+
+users = [1 ... 10000].map({
+    "username": "user" + v,
+    "password": "password" + i,
+    "i": i
+}).map(v + {"odd": v.i%2 != 0});
+    `
+	r := strings.NewReader(data)
+	scanner := NewTokenScanner(NewLexer(r, 128))
 	stmt := NewStmtExecutor(scanner, NewContext())
 	if err := stmt.Execute(); err != nil {
 		t.Fatal(err)
@@ -263,16 +270,39 @@ func TestStmt_config(t *testing.T) {
 }
 
 func BenchmarkStmt_config(b *testing.B) {
-	f, err := os.Open("./testdata/config.djson")
-	if err != nil {
-		b.Fatal(err)
-	}
+	data := `
+# a config test
+
+users = [1 ... 10000].map({
+    "username": "user" + v,
+    "password": "password" + i,
+    "i": i
+}).map(v + {"odd": v.i%2 != 0});
+    `
+	r := strings.NewReader(data)
 	for i := 0; i < b.N; i++ {
-		f.Seek(0, io.SeekStart)
-		scanner := NewTokenScanner(NewLexer(f, 128))
+		r.Seek(0, io.SeekStart)
+		scanner := NewTokenScanner(NewLexer(r, 128))
 		stmt := NewStmtExecutor(scanner, NewContext())
-		if err := stmt.Execute(); err != nil {
+		if err := stmt.Execute(For(NullValue())); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+func Benchmark_goconfig(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		m := make([]map[string]interface{}, 10000)
+		for i := 0; i < 10000; i++ {
+			m[i] = map[string]interface{}{
+				"username": "user" + fmt.Sprintf("%d", i+1),
+				"password": "password" + fmt.Sprintf("%d", 1),
+				"i":        i,
+			}
+		}
+		for i, item := range m {
+			item["odd"] = item["i"].(int)%2 != 0
+			m[i] = item
 		}
 	}
 }

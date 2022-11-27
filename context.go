@@ -7,6 +7,8 @@ type Context interface {
 	ValueOf(name []byte) Value
 	PushScope()
 	PopScope()
+	Merge(ctx Context)
+	All() []Variable
 	Copy() Context
 	pushMe(val Value)
 	popMe()
@@ -69,13 +71,6 @@ func (s *scope) del(idx int) {
 	s.vars = append(s.vars[:idx], s.vars[idx+1:]...)
 }
 
-func (s *scope) valueOf(name []byte) Value {
-	if idx := s.indexOf(name); idx > -1 {
-		return s.vars[idx].Value
-	}
-	return NullValue()
-}
-
 func (v *ctx) Assign(name []byte, val Value) {
 	scope := v.scope
 	for scope != nil {
@@ -86,6 +81,36 @@ func (v *ctx) Assign(name []byte, val Value) {
 		scope = scope.p
 	}
 	v.scope.assign(name, val)
+}
+
+func (ctx *ctx) Merge(lv Context) {
+	all := lv.All()
+	for _, v := range all {
+		ctx.Assign(v.Name, v.Value)
+	}
+}
+
+func (v *ctx) All() []Variable {
+	ret := []Variable{}
+	inRet := func(v *Variable) bool {
+		for _, lv := range ret {
+			if bytes.Equal(lv.Name, v.Name) {
+				return true
+			}
+		}
+		return false
+	}
+	scope := v.scope
+	for scope != nil {
+		for _, v := range scope.vars {
+			if inRet(&v) {
+				continue
+			}
+			ret = append(ret, v)
+		}
+		scope = scope.p
+	}
+	return ret
 }
 
 func (v *ctx) Copy() Context {

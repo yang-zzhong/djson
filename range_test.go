@@ -1,6 +1,9 @@
 package djson
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMapRange(t *testing.T) {
 	// [1 ... 10].map(i + v)
@@ -36,4 +39,37 @@ func TestMapRange(t *testing.T) {
 		}
 		return true
 	})
+}
+
+func TestRange_parallelMap(t *testing.T) {
+	data := `
+# range parallel map test
+
+[1 ... 100].parallel({
+    "key": i,
+    "val": v
+})
+    `
+	stmt := NewStmtExecutor(NewTokenScanner(NewLexer(strings.NewReader(data), 128)), NewContext())
+	if err := stmt.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(stmt.Value())
+}
+
+func BenchmarkRange_parallelMap(b *testing.B) {
+	data := `
+# range parallel map test
+
+[1 ... 10000].parallel({
+    "key": i,
+    "val": v
+})
+    `
+	for i := 0; i < b.N; i++ {
+		stmt := NewStmtExecutor(NewTokenScanner(NewLexer(strings.NewReader(data), 128)), NewContext())
+		if err := stmt.Execute(); err != nil {
+			b.Fatal(err)
+		}
+	}
 }

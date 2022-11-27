@@ -1,0 +1,6 @@
+# range parallel map test
+
+[1 ... 10000].parallel({
+    "key": i,
+    "val": v
+})

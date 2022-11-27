@@ -17,9 +17,9 @@ type CallableRegister struct {
 type Callback func(caller Value, scanner TokenScanner, vars Context) (Value, error)
 
 func NewCallableRegister(typ string) *CallableRegister {
-	c := &CallableRegister{typ: typ}
-	c.RegisterCall("if", ifCall)
-	return c
+	return &CallableRegister{typ: typ, calls: map[string]Callback{
+		"if": ifCall,
+	}}
 }
 
 func (c *CallableRegister) RegisterCall(k string, ck Callback) {

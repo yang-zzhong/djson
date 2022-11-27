@@ -96,7 +96,7 @@ azs = [
      ]
   }, 
   # set header name
-  header.map(k == "innerText" => "其他信息"),
+  header.trans(_me.innerText = "其他信息"),
   row + {
     "children": [{
       "type": "row",
